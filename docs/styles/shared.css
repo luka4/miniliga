@@ -1128,6 +1128,33 @@ a {
   font-weight: 500;
 }
 
+/* Player + rating after the match + gain/loss (detailed team match view) */
+.game-player {
+  line-height: 1.25;
+  margin-bottom: 2px;
+}
+
+.game-player-meta {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+.game-player-meta .rating-current {
+  font-weight: 600;
+  color: var(--color-text-subtle);
+}
+
+.game-player-meta .diff-val {
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+.game-player-meta .diff-up { color: var(--color-success); }
+.game-player-meta .diff-down { color: var(--color-danger); }
+.game-player-meta .diff-neu { color: var(--color-muted-2); }
+
 .game-score {
   font-weight: 900;
   font-size: 1.2em;

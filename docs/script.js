@@ -3249,6 +3249,34 @@ function renderResultsPage() {
 }
 
 // Shared Helper for List
+// Detailed game row names: player name plus rating after the match and rating gain/loss (like the player history).
+function buildGameNamesHtml(g, sA, sB, playersData) {
+    const splitNames = (str) => String(str || '').split('/').map(n => n.trim()).filter(Boolean);
+    const diffHtml = (delta) => {
+        if (!Number.isFinite(delta)) return '';
+        if (Math.abs(delta) < 0.01) return '<span class="diff-val diff-neu">-</span>';
+        return `<span class="diff-val ${delta > 0 ? 'diff-up' : 'diff-down'}">${delta > 0 ? '▲' : '▼'}${Math.abs(delta).toFixed(2)}</span>`;
+    };
+    const isDoubles = g.doubles === true || g.doubles === 'true';
+    const sideHtml = (ownStr, oppStr, scoreOwn, scoreOpp) => {
+        const oppDisplay = splitNames(oppStr).join(' / ');
+        return splitNames(ownStr).map(name => {
+            const nameHtml = `<span class="game-player-name">${escapeHtml(name)}</span>`;
+            if (isWalkoverToken(name)) return `<div class="game-player">${nameHtml}</div>`;
+            const md = playersData && playersData[name] && Array.isArray(playersData[name].matchDetails)
+                ? playersData[name].matchDetails.find(m =>
+                    m.round === g.round && (m.season || null) === (g.season || null) &&
+                    m.opponent === oppDisplay && m.score_own === scoreOwn && m.score_opp === scoreOpp &&
+                    !!m.isDoubles === isDoubles)
+                : null;
+            if (!md || !Number.isFinite(md.rating_after)) return `<div class="game-player">${nameHtml}</div>`;
+            return `<div class="game-player">${nameHtml}<span class="game-player-meta"><span class="rating-current">${md.rating_after.toFixed(2)}</span>${diffHtml(md.delta_own)}</span></div>`;
+        }).join('');
+    };
+    const scoreClass = sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '');
+    return `<div class="game-names"><div class="player-left">${sideHtml(g.player_a, g.player_b, sA, sB)}</div><div class="game-score ${scoreClass}">${sA}:${sB}</div><div class="player-right">${sideHtml(g.player_b, g.player_a, sB, sA)}</div></div>`;
+}
+
 function renderMatchList(matches, container, appendToProvided, playersData = null, teamMapData = null, selectedTeamForFilter = null) {
     const teamMatches = {};
     matches.forEach(m => {
@@ -3701,7 +3729,7 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                         <span class="team-score team-score-left">${teamScoreA}</span>
                         <div class="game-row-content">
                             ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                            <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                            ${buildGameNamesHtml(g, sA, sB, playersData)}
                         </div>
                         <span class="team-score team-score-right">${teamScoreB}</span>
                     </div>`;
@@ -3724,7 +3752,7 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                             <span class="team-score team-score-left">${teamScoreA}</span>
                             <div class="game-row-content">
                                 ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                                <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                                ${buildGameNamesHtml(g, sA, sB, playersData)}
                             </div>
                             <span class="team-score team-score-right">${teamScoreB}</span>
                         </div>`;
@@ -8409,7 +8437,7 @@ function renderMyTeamPage() {
                         <span class="team-score team-score-left">${teamScoreA}</span>
                         <div class="game-row-content">
                             ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                            <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                            ${buildGameNamesHtml(g, sA, sB, players)}
                         </div>
                         <span class="team-score team-score-right">${teamScoreB}</span>
                     </div>`;
@@ -8432,7 +8460,7 @@ function renderMyTeamPage() {
                             <span class="team-score team-score-left">${teamScoreA}</span>
                             <div class="game-row-content">
                                 ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                                <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                                ${buildGameNamesHtml(g, sA, sB, players)}
                             </div>
                             <span class="team-score team-score-right">${teamScoreB}</span>
                         </div>`;
@@ -8832,7 +8860,7 @@ function renderMyTeamPage() {
                                     <span class="team-score team-score-left">${teamScoreA}</span>
                                     <div class="game-row-content">
                                         ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                                        <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                                        ${buildGameNamesHtml(g, sA, sB, players)}
                                     </div>
                                     <span class="team-score team-score-right">${teamScoreB}</span>
                                 </div>`;
@@ -8856,7 +8884,7 @@ function renderMyTeamPage() {
                                         <div class="game-row-content">
                                             <span class="game-number">${gameNumber}</span>
                                             ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
-                                            <div class="game-names"><div class="player-left">${escapeHtml(g.player_a)}</div><div class="game-score ${sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '')}">${sA}:${sB}</div><div class="player-right">${escapeHtml(g.player_b)}</div></div>
+                                            ${buildGameNamesHtml(g, sA, sB, players)}
                                         </div>
                                         <span class="team-score team-score-right">${teamScoreB}</span>
                                     </div>`;
