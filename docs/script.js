@@ -445,6 +445,21 @@ function getPlayerRatingAtOrBeforeRound(player, targetSeasonOrder, targetRoundOr
     return best ? best.rating : null;
 }
 
+// Season of the most recently played match = "current season" (works without roster data too).
+function getCurrentPlayedSeason() {
+    const played = (matchResults || []).filter(isPlayedMatch);
+    return played.length ? (played[played.length - 1].season || null) : null;
+}
+
+// True when the player has at least one match in `season` (optionally only up to and including `maxRoundOrder`).
+function hasPlayedInSeason(player, season, maxRoundOrder = null) {
+    if (!player || !Array.isArray(player.matchDetails)) return false;
+    return player.matchDetails.some(m => {
+        if ((m.season || null) !== (season || null)) return false;
+        return maxRoundOrder === null || getRoundOrderFromStr(m.round) <= maxRoundOrder;
+    });
+}
+
 function isRoundFullyPlayedForBadges(roundId) {
     const roundMatches = (matchResults || []).filter(m => getMatchRoundId(m) === roundId);
     if (!roundMatches.length) return false;
@@ -468,7 +483,9 @@ function isRoundFullyPlayedForBadges(roundId) {
 function buildTopOfWorldAchievements(roundInfo, allPlayers) {
     const badgeDef = ACHIEVEMENT_DEFINITIONS.topOfWorld;
     const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
+    // Only players who already played in this season (up to this round) are eligible.
     const topRated = Object.values(allPlayers || {})
+        .filter(player => hasPlayedInSeason(player, roundInfo.season, roundInfo.roundOrder))
         .map(player => ({
             player,
             ratingAtRound: getPlayerRatingAtOrBeforeRound(player, roundInfo.seasonOrder, roundInfo.roundOrder)
@@ -4201,9 +4218,14 @@ function renderRatingPage() {
         return achievementsByPlayer;
     };
     
+    // Players with no match in the current season are "inactive" (grey) and go below everyone else.
+    const currentSeason = getCurrentPlayedSeason();
+    const isInactive = (p) => !!currentSeason && !hasPlayedInSeason(p, currentSeason);
+
     // Helper function to get rating color group priority
-    // Green (21+ matches) = 3, Orange (11-20 matches) = 2, Red (0-10 matches) = 1
+    // Green (21+ matches) = 3, Orange (11-20 matches) = 2, Red (0-10 matches) = 1, Grey (inactive this season) = 0
     const getRatingColorGroup = (p) => {
+        if (isInactive(p)) return 0; // Grey
         const totalMatches = (p.matches || 0) + (p.dMatches || 0);
         if (totalMatches > 20) return 3; // Green
         if (totalMatches > 10) return 2; // Orange
@@ -4496,7 +4518,8 @@ function renderRatingPage() {
             const bestWinStr = p.bestWinOpponent ? `${p.bestWinOpponent} (${p.bestWinRating.toFixed(2)})` : '';
 
             let ratingClass = 'rating-high';
-            if (p.matches + p.dMatches <= 10) ratingClass = 'rating-low';
+            if (isInactive(p)) ratingClass = 'rating-inactive';
+            else if (p.matches + p.dMatches <= 10) ratingClass = 'rating-low';
             else if (p.matches + p.dMatches <= 20) ratingClass = 'rating-med';
 
             const ratingRank = ratingRanking.get(normalizePlayerKey(p.name)) || (index + 1);

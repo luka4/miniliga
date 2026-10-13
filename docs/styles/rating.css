@@ -344,6 +344,10 @@ tbody td:nth-child(2) {
   color: var(--color-warning) !important;
   font-weight: bold;
 }
+.rating-inactive {
+  color: var(--color-muted, #9ca3af) !important;
+  font-weight: bold;
+}
 .rating-high {
   color: var(--color-success) !important;
   font-weight: bold;
