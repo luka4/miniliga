@@ -36,6 +36,13 @@
     <div class="container" id="mainContainer">
         <h2>Aktuálny Rating Hráčov</h2>
         <div class="info-trigger" onclick="openInfoModal()">ⓘ Ako funguje Rating?</div>
+        <div class="match-details-header">
+            <label class="match-details-toggle" title="Rating zostáva celkový, štatistiky sa počítajú len z aktuálnej sezóny">
+                <input type="checkbox" id="seasonOnlyToggle">
+                <span class="match-details-toggle__slider"></span>
+                <span class="match-details-toggle__text">Štatistiky len z aktuálnej sezóny</span>
+            </label>
+        </div>
         <div class="scroll-hint">↔ Posuňte tabuľku pre viac štatistík</div>
         <div class="table-wrapper" id="mainTableWrapper">
             <table id="mainTable">
@@ -227,7 +234,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=1"></script>
 <script src="matchData.js?v=7"></script>
-<script src="script.js?v=15"></script>
+<script src="script.js?v=16"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>

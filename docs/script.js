@@ -446,6 +446,20 @@ function getPlayerRatingAtOrBeforeRound(player, targetSeasonOrder, targetRoundOr
 }
 
 // Season of the most recently played match = "current season" (works without roster data too).
+// Per-season stat bucket on a player (used by the "current season only" view of the rating table).
+function getSeasonBucket(p, season) {
+    if (!p.bySeason) p.bySeason = {};
+    const key = season || 'N/A';
+    if (!p.bySeason[key]) {
+        p.bySeason[key] = {
+            matches: 0, wins: 0, losses: 0, setsWin: 0, setsLose: 0,
+            dMatches: 0, dWins: 0, dLosses: 0,
+            bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A'
+        };
+    }
+    return p.bySeason[key];
+}
+
 function getCurrentPlayedSeason() {
     const played = (matchResults || []).filter(isPlayedMatch);
     return played.length ? (played[played.length - 1].season || null) : null;
@@ -1637,11 +1651,11 @@ function processData(currentRoundIdOverride = null) {
         // 1. Increment Counters & Set Last Played FIRST
         // This ensures we can calculate the K-factor for the *current* match index correctly later.
         if (isDoubles) {
-            pNamesA.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; });
-            pNamesB.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; });
+            pNamesA.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; });
+            pNamesB.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; });
         } else {
-            pNamesA.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; });
-            pNamesB.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; });
+            pNamesA.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; });
+            pNamesB.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; });
         }
 
         // 2. Calculate Team Ratings (Average for Doubles, Single for Singles)
@@ -1750,15 +1764,22 @@ function processData(currentRoundIdOverride = null) {
                 if (isDoubles) deltaOwn = deltaOwn / 2;
                 // ---------------------------------------
 
+                const sb = getSeasonBucket(p, match.season);
                 if (isDoubles) {
                     p.dSetsWin += scoreOwn;
                     p.dSetsLose += scoreOpp;
-                    if (scoreOwn > scoreOpp) p.dWins++; else if (scoreOpp > scoreOwn) p.dLosses++;
+                    if (scoreOwn > scoreOpp) { p.dWins++; sb.dWins++; } else if (scoreOpp > scoreOwn) { p.dLosses++; sb.dLosses++; }
                 } else {
                     p.setsWin += scoreOwn;
                     p.setsLose += scoreOpp;
-                    if (scoreOwn > scoreOpp) p.wins++; else if (scoreOpp > scoreOwn) p.losses++;
+                    sb.setsWin += scoreOwn;
+                    sb.setsLose += scoreOpp;
+                    if (scoreOwn > scoreOpp) { p.wins++; sb.wins++; } else if (scoreOpp > scoreOwn) { p.losses++; sb.losses++; }
                     const oppRating = isDoubles ? 0 : players[oppNames[0]].rating;
+                    if (scoreOwn > scoreOpp && oppRating > sb.bestWinRating) {
+                        sb.bestWinOpponent = oppNames[0];
+                        sb.bestWinRating = oppRating;
+                    }
                     if (scoreOwn > scoreOpp && oppRating > p.bestWinRating) {
                         p.bestWinOpponent = oppNames[0];
                         p.bestWinRating = oppRating;
@@ -4312,6 +4333,15 @@ function renderRatingPage() {
         ratingRanking.set(normalizePlayerKey(p.name), i + 1);
     });
 
+    // Stats scope: all seasons (default) or current season only. Rating itself is always all-seasons.
+    let seasonOnly = false;
+    const EMPTY_SEASON_STATS = { matches: 0, wins: 0, losses: 0, setsWin: 0, setsLose: 0, dMatches: 0, dWins: 0, dLosses: 0,
+        bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A' };
+    const statsOf = (p) => {
+        if (!seasonOnly) return p;
+        return (p.bySeason && p.bySeason[currentSeason || 'N/A']) || EMPTY_SEASON_STATS;
+    };
+
     // Sorting state (applies to all columns except "Tím")
     const baselineIndex = new Map(sortedPlayers.map((p, i) => [normalizePlayerKey(p.name), i]));
     let sortState = { key: 'pos', dir: 'asc' }; // default = rating desc
@@ -4322,13 +4352,14 @@ function renderRatingPage() {
         const dirMul = sortState.dir === 'asc' ? 1 : -1;
         const decorated = list.map((p, idx) => ({p, idx})); // stable
 
-        const getSuccessMatches = (p) => p.matches > 0 ? (p.wins / p.matches) * 100 : 0;
+        const getSuccessMatches = (p) => { const s = statsOf(p); return s.matches > 0 ? (s.wins / s.matches) * 100 : 0; };
         const getSuccessSets = (p) => {
-            const total = (p.setsWin || 0) + (p.setsLose || 0);
-            return total > 0 ? ((p.setsWin || 0) / total) * 100 : 0;
+            const s = statsOf(p);
+            const total = (s.setsWin || 0) + (s.setsLose || 0);
+            return total > 0 ? ((s.setsWin || 0) / total) * 100 : 0;
         };
-        const getLastPlayedNum = (p) => getRoundNumFromStr(p.lastPlayed);
-        const getBestWinRating = (p) => (typeof p.bestWinRating === 'number' && !isNaN(p.bestWinRating)) ? p.bestWinRating : -Infinity;
+        const getLastPlayedNum = (p) => getRoundNumFromStr(statsOf(p).lastPlayed);
+        const getBestWinRating = (p) => { const r = statsOf(p).bestWinRating; return (typeof r === 'number' && !isNaN(r)) ? r : -Infinity; };
 
         const valueForKey = (p, key) => {
             switch (key) {
@@ -4348,25 +4379,25 @@ function renderRatingPage() {
                 case 'rebricek':
                     return p.rebricek || 0;
                 case 's_matches':
-                    return p.matches || 0;
+                    return statsOf(p).matches || 0;
                 case 's_wins':
-                    return p.wins || 0;
+                    return statsOf(p).wins || 0;
                 case 's_losses':
-                    return p.losses || 0;
+                    return statsOf(p).losses || 0;
                 case 's_sets_win':
-                    return p.setsWin || 0;
+                    return statsOf(p).setsWin || 0;
                 case 's_sets_lose':
-                    return p.setsLose || 0;
+                    return statsOf(p).setsLose || 0;
                 case 's_success_matches':
                     return getSuccessMatches(p);
                 case 's_success_sets':
                     return getSuccessSets(p);
                 case 'd_matches':
-                    return p.dMatches || 0;
+                    return statsOf(p).dMatches || 0;
                 case 'd_wins':
-                    return p.dWins || 0;
+                    return statsOf(p).dWins || 0;
                 case 'd_losses':
-                    return p.dLosses || 0;
+                    return statsOf(p).dLosses || 0;
                 case 'best_win':
                     return getBestWinRating(p);
                 case 'last_played':
@@ -4392,8 +4423,8 @@ function renderRatingPage() {
 
             // Special handling for sets column: sort by setsWin desc/asc then setsLose inverse for readability
             if (sortState.key === 's_sets') {
-                const aw = a.setsWin || 0, bw = b.setsWin || 0;
-                const al = a.setsLose || 0, bl = b.setsLose || 0;
+                const aw = statsOf(a).setsWin || 0, bw = statsOf(b).setsWin || 0;
+                const al = statsOf(a).setsLose || 0, bl = statsOf(b).setsLose || 0;
                 if (aw !== bw) return (aw - bw) * dirMul;
                 // Fewer lost sets is better when sorting desc; invert using dirMul
                 if (al !== bl) return (bl - al) * dirMul;
@@ -4512,10 +4543,11 @@ function renderRatingPage() {
                 if (window.getSelection().toString().length === 0) openPlayerModal(p);
             };
 
-            const successMatches = p.matches > 0 ? ((p.wins / p.matches) * 100).toFixed(2) : 0;
-            const totalSets = p.setsWin + p.setsLose;
-            const successSets = totalSets > 0 ? ((p.setsWin / totalSets) * 100).toFixed(2) : 0;
-            const bestWinStr = p.bestWinOpponent ? `${p.bestWinOpponent} (${p.bestWinRating.toFixed(2)})` : '';
+            const st = statsOf(p);
+            const successMatches = st.matches > 0 ? ((st.wins / st.matches) * 100).toFixed(2) : 0;
+            const totalSets = st.setsWin + st.setsLose;
+            const successSets = totalSets > 0 ? ((st.setsWin / totalSets) * 100).toFixed(2) : 0;
+            const bestWinStr = st.bestWinOpponent ? `${st.bestWinOpponent} (${st.bestWinRating.toFixed(2)})` : '';
 
             let ratingClass = 'rating-high';
             if (isInactive(p)) ratingClass = 'rating-inactive';
@@ -4559,15 +4591,23 @@ function renderRatingPage() {
                 <td class="form-cell">${formHtml}</td>
 <!--                TODO temporary remove rebricek-->
 <!--                <td>${rebricekVal}</td>-->
-                <td class="border-left-thick">${p.matches}</td><td>${p.wins}</td><td>${p.losses}</td>
-                <td>${p.setsWin}:${p.setsLose}</td><td>${successMatches}</td><td>${successSets}</td>
-                <td class="border-left-thick">${p.dMatches}</td><td>${p.dWins}</td><td>${p.dLosses}</td>
-                <td class="border-left-thick">${bestWinStr}</td><td>${p.lastPlayed}</td>
+                <td class="border-left-thick">${st.matches}</td><td>${st.wins}</td><td>${st.losses}</td>
+                <td>${st.setsWin}:${st.setsLose}</td><td>${successMatches}</td><td>${successSets}</td>
+                <td class="border-left-thick">${st.dMatches}</td><td>${st.dWins}</td><td>${st.dLosses}</td>
+                <td class="border-left-thick">${bestWinStr}</td><td>${st.lastPlayed}</td>
                 <td>${p.maxRating.toFixed(2)}</td><td>${p.minRating.toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
         });
     };
+
+    const seasonToggle = document.getElementById('seasonOnlyToggle');
+    if (seasonToggle) {
+        seasonToggle.addEventListener('change', () => {
+            seasonOnly = seasonToggle.checked;
+            renderTable();
+        });
+    }
 
     const attachSortHandlersForThead = (theadEl) => {
         if (!theadEl) return;
