@@ -7,7 +7,7 @@
 var matchResults = window.matchResults = [];
 
 (() => {
-  const ASSET_VERSION = '15';
+  const ASSET_VERSION = '16';
   const STATIC_MATCHES_URL = `data/matches.json?v=${ASSET_VERSION}`;
 
   function is4LligaEnabled() {
