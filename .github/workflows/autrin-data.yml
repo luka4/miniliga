@@ -52,7 +52,10 @@ jobs:
           "
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/matches.json docs/matchData.js
+          # Timestamp for the "Aktualizované" badge (shown in Bratislava time by script.js;
+          # the Config!B2 value from the sheet takes priority over it)
+          echo "{\"updated\": \"$(date -u +%FT%TZ)\"}" > docs/data/updated.json
+          git add docs/data/matches.json docs/matchData.js docs/data/updated.json
           git commit -m "Autrin data $(date -u +%F)"
           git pull --rebase origin main
           git push origin HEAD:main

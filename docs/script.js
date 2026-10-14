@@ -9479,25 +9479,52 @@ function renderNavigation() {
     };
 
     // Fetch and update nav badge text from Google Sheets (Config!B2)
-    const loadNavBadgeFromSheet = async () => {
-        if (typeof GoogleSheetsLoader === 'undefined') {
-            console.warn('GoogleSheetsLoader not available, keeping static nav badge.');
-            return;
-        }
+    // Fallback: timestamp written by the autrin workflow (data/updated.json),
+    // shown in Bratislava time: date + time on desktop, date only on mobile.
+    const loadNavBadgeFromScraper = async () => {
         try {
-            const badgeText = await GoogleSheetsLoader.fetchCell({
-                sheetName: 'Config',
-                cell: 'B2',
-                cache: false
-            });
-            if (badgeText) {
-                const badge = document.getElementById('navBadge');
-                if (badge) {
-                    badge.innerHTML = badgeText;
-                }
-            }
+            const res = await fetch('data/updated.json', { cache: 'no-cache' });
+            if (!res.ok) return;
+            const { updated } = await res.json();
+            const dt = new Date(updated);
+            if (isNaN(dt)) return;
+            const parts = Object.fromEntries(
+                new Intl.DateTimeFormat('sk-SK', {
+                    timeZone: 'Europe/Bratislava',
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+                }).formatToParts(dt).map(p => [p.type, p.value])
+            );
+            const badge = document.getElementById('navBadge');
+            if (!badge) return;
+            badge.innerHTML = `Aktualizované:<br>${parts.day}.${parts.month}.${parts.year}` +
+                `<span class="nav-badge-time"> ${parts.hour}:${parts.minute}</span>`;
         } catch (e) {
-            console.error('Failed to load nav badge from sheet:', e);
+            console.error('Failed to load nav badge from updated.json:', e);
+        }
+    };
+
+    // Sheet value (Config!B2) has priority; otherwise use the scraper timestamp.
+    const loadNavBadgeFromSheet = async () => {
+        let badgeText = null;
+        if (typeof GoogleSheetsLoader === 'undefined') {
+            console.warn('GoogleSheetsLoader not available, using scraper timestamp.');
+        } else {
+            try {
+                badgeText = await GoogleSheetsLoader.fetchCell({
+                    sheetName: 'Config',
+                    cell: 'B2',
+                    cache: false
+                });
+            } catch (e) {
+                console.error('Failed to load nav badge from sheet:', e);
+            }
+        }
+        if (badgeText) {
+            const badge = document.getElementById('navBadge');
+            if (badge) badge.innerHTML = badgeText;
+        } else {
+            await loadNavBadgeFromScraper();
         }
     };
 

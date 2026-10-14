@@ -267,6 +267,11 @@ a {
     font-size: 1.15em;
   }
 
+  /* Date only on mobile */
+  .nav-badge-time {
+    display: none;
+  }
+
   /* Badge positioning for mobile */
   .nav-badge {
     top: 50%;
