@@ -1,0 +1,28 @@
+{
+  "teams": {
+    "SKP A": "SKP \"A\"",
+    "SKP B": "SKP \"B\"",
+    "MYSLAVA ŽENY": "MYSLAVA \"Ž\"",
+    "COCERY TEAM": "COKERY"
+  },
+  "locations": {
+    "SOŠŽ": "SOŠ Ž"
+  },
+  "players": {
+    "Hráč Nenastúpil": "WO",
+    "Ing. Peter Šebek st.": "Peter ŠEBEK",
+    "Tomáš Bekecs Zvarillo": "Tomáš BEKECS",
+    "Jaroslav Andraščik": "Jarosl ANDRAŠČIK",
+    "Miroslav Harčarik": "Miro. HARČÁRIK",
+    "Zuzana Gaži Gabrielová": "Zuzana GAŽI",
+    "Dmitro Lukachuk": "Dmytro LUKACHUK",
+    "Peter Pollák": "Peter POLÁK",
+    "Ľuboš Bendzák": "Ľubomír BENDZÁK",
+    "Miroslav Haničák": "Miro. HANIČÁK",
+    "Nóra Szemánné Kiss": "Nóra KISS",
+    "Peter Szceczina": "Peter SZCZECZINA",
+    "Vilo Pollák": "Vilo POLÁK",
+    "Július Wéber": "Julus WÉBER",
+    "RNDr. Štefan Vendel": "Štefan VENDEL"
+  }
+}
