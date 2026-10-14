@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Scrapes autrin.sk (Miniliga) and FILLS GAPS in one season of docs/data/matches.json: a team match is only
 // written when matches.json has no real rows for it yet (missing, or only WO/WO placeholder rows).
-// Existing rows are never modified.
+// Existing rows with real data are never modified; placeholders follow autrin's date/time/place.
 // Usage: node crawl.mjs [--out docs/data/matches.json] [--rocnik 4] [--season "JESEŇ 2026"]
 // Writes nothing (exit 1) when a safety check fails, so a failed run keeps the last good data.
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -60,7 +60,9 @@ async function main() {
       const rows = [];
       const games = tm.score && tm.id ? parseProtocol(await get(`${BASE}&zapis_zobr=1&zapas_zobr_id=${tm.id}`)) : [];
       if (!games.length) { // not played yet, or played without a protocol: one placeholder row
-        if (existing.has(key)) continue; // placeholder already there
+        // placeholder (or gap): rewritten every run so schedule changes (date/time/place) are picked up
+        const prev = old.find((r) => mkey(r) === key);
+        if (prev && (prev.date !== tm.date || prev.location !== location(tm.location))) filled.push(`${round} ${tm.home} - ${tm.away}: rescheduled ${prev.date} -> ${tm.date}`);
         rows.push(mk('WO', 'WO', tm.score?.[0] ?? 0, tm.score?.[1] ?? 0, false));
         fills.set(key, rows);
         continue;
