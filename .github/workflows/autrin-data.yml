@@ -1,4 +1,5 @@
-# Scrapes autrin.sk (official Miniliga site) into the JESEŇ 2026 block of docs/data/matches.json,
+# Scrapes autrin.sk (official Miniliga site) and fills only the missing / placeholder matches of the JESEŇ 2026
+# block in docs/data/matches.json (existing rows are never modified),
 # then commits and pushes to main. Script: scripts/autrin/crawl.mjs. Name mapping: scripts/autrin/name-map.json
 # (player names come from the DB_<SEASON> roster tab, falling back to names already in matches.json).
 # The crawler writes nothing when a safety check fails, so a failed run keeps the last good data.

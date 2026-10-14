@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Scrapes autrin.sk (Miniliga) and rewrites ONE season block of docs/data/matches.json.
+// Scrapes autrin.sk (Miniliga) and FILLS GAPS in one season of docs/data/matches.json: a team match is only
+// written when matches.json has no real rows for it yet (missing, or only WO/WO placeholder rows).
+// Existing rows are never modified.
 // Usage: node crawl.mjs [--out docs/data/matches.json] [--rocnik 4] [--season "JESEŇ 2026"]
 // Writes nothing (exit 1) when a safety check fails, so a failed run keeps the last good data.
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -38,7 +40,11 @@ async function main() {
   const roundIds = parseRoundIds(await get(`${BASE}&kola_zobr=1`));
   if (roundIds.length !== EXPECTED_ROUNDS) throw new Error(`Expected ${EXPECTED_ROUNDS} rounds, found ${roundIds.length}`);
 
-  const rows = [];
+  const mkey = (r) => `${r.round}|${r.player_a_team}|${r.player_b_team}`;
+  const existing = new Map(); // match key -> has real (non-placeholder) rows
+  for (const r of old) existing.set(mkey(r), existing.get(mkey(r)) || r.player_a !== 'WO' || r.player_b !== 'WO');
+  const fills = new Map(); // match key -> rows replacing the placeholder / filling the gap
+  const filled = [];
   const teamsSeen = new Set();
   for (const [i, id] of roundIds.entries()) {
     const round = `${i + 1} kolo`;
@@ -49,9 +55,14 @@ async function main() {
         score_a: sa, score_b: sb, player_a: a, player_b: b, round, player_a_team: ta, player_b_team: tb,
         ...(doubles ? { doubles: true } : {}), date: tm.date, location: location(tm.location), season: SEASON, group: '',
       });
+      const key = `${round}|${ta}|${tb}`;
+      if (existing.get(key)) continue; // already filled: leave untouched
+      const rows = [];
       const games = tm.score && tm.id ? parseProtocol(await get(`${BASE}&zapis_zobr=1&zapas_zobr_id=${tm.id}`)) : [];
       if (!games.length) { // not played yet, or played without a protocol: one placeholder row
+        if (existing.has(key)) continue; // placeholder already there
         rows.push(mk('WO', 'WO', tm.score?.[0] ?? 0, tm.score?.[1] ?? 0, false));
+        fills.set(key, rows);
         continue;
       }
       let wa = 0, wb = 0;
@@ -60,16 +71,31 @@ async function main() {
         rows.push(mk(a, b, g.sets[0], g.sets[1], g.doubles));
         if (g.sets[0] > g.sets[1]) wa++; else if (g.sets[1] > g.sets[0]) wb++;
       }
+      fills.set(key, rows);
+      filled.push(`${round} ${tm.home} - ${tm.away}`);
       if (wa !== tm.score[0] || wb !== tm.score[1]) {
         throw new Error(`Round ${i + 1} ${tm.home}-${tm.away}: protocol wins ${wa}:${wb} != team score ${tm.score.join(':')}`);
       }
     }
   }
   if (teamsSeen.size !== EXPECTED_TEAMS) throw new Error(`Expected ${EXPECTED_TEAMS} teams, found ${teamsSeen.size}`);
-  if (old.length && rows.length < old.length * 0.8) throw new Error(`Row count dropped ${old.length} -> ${rows.length}`);
 
-  writeFileSync(OUT, dump([...rest, ...rows]));
-  const summary = [`${SEASON}: ${old.length} -> ${rows.length} rows`];
+  // Merge in place: a fill replaces the match's existing placeholder rows at their position;
+  // matches not in the file yet go after the last row of their round.
+  const merged = [];
+  for (const r of old) {
+    const k = mkey(r);
+    if (!fills.has(k)) { merged.push(r); continue; }
+    if (fills.get(k)) { merged.push(...fills.get(k)); fills.set(k, null); } // first placeholder row emits the fill
+  }
+  for (const [k, rows] of fills) {
+    if (!rows) continue;
+    let at = merged.map((r) => r.round).lastIndexOf(rows[0].round);
+    merged.splice(at < 0 ? merged.length : at + 1, 0, ...rows);
+  }
+  const all2 = [...rest, ...merged];
+  writeFileSync(OUT, dump(all2));
+  const summary = [`${SEASON}: ${old.length} -> ${merged.length} rows`, ...filled.map((f) => `  filled: ${f}`)];
   if (res.fresh.size) {
     summary.push('NEW names (not in roster/matches.json; add overrides to scripts/autrin/name-map.json if wrong):',
       ...[...res.fresh].map(([a, g]) => `  ${a} -> ${g}`));
