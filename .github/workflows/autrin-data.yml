@@ -3,12 +3,10 @@
 # then commits and pushes to main. Script: scripts/autrin/crawl.mjs. Name mapping: scripts/autrin/name-map.json
 # (player names come from the DB_<SEASON> roster tab, falling back to names already in matches.json).
 # The crawler writes nothing when a safety check fails, so a failed run keeps the last good data.
-# Trigger: Mon-Fri 22:00 UTC, or manually (Actions -> "Autrin data" -> Run workflow).
+# Trigger: manual only (Actions -> "Autrin data" -> Run workflow).
 
 name: Autrin data
 on:
-  schedule:
-    - cron: "0 22 * * 1-5"
   workflow_dispatch:
 
 permissions:
