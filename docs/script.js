@@ -454,7 +454,7 @@ function getSeasonBucket(p, season) {
         p.bySeason[key] = {
             matches: 0, wins: 0, losses: 0, setsWin: 0, setsLose: 0,
             dMatches: 0, dWins: 0, dLosses: 0,
-            bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A'
+            bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A', lastPlayedSeason: null
         };
     }
     return p.bySeason[key];
@@ -1084,7 +1084,7 @@ function makeRosterOnlyPlayer(name, teamName) {
         setsWin: 0, setsLose: 0,
         dMatches: 0, dWins: 0, dLosses: 0, dSetsWin: 0, dSetsLose: 0,
         maxRating: INITIAL_RATING, minRating: INITIAL_RATING,
-        team: teamName || 'N/A', lastPlayed: 'N/A', roundGain: 0,
+        team: teamName || 'N/A', lastPlayed: 'N/A', lastPlayedSeason: null, roundGain: 0,
         latestRoundEffectiveness: null, latestRoundEffectivenessEntries: [],
         effectivenessHistory: {}, effectivenessHistoryEntries: {},
         bestWinOpponent: null, bestWinRating: -Infinity,
@@ -1615,7 +1615,7 @@ function processData(currentRoundIdOverride = null) {
                 setsWin: 0, setsLose: 0,
                 dMatches: 0, dWins: 0, dLosses: 0, dSetsWin: 0, dSetsLose: 0,
                 maxRating: initialRating, minRating: initialRating,
-                team: teamName || 'N/A', lastPlayed: 'N/A', roundGain: 0,
+                team: teamName || 'N/A', lastPlayed: 'N/A', lastPlayedSeason: null, roundGain: 0,
                 latestRoundEffectiveness: null, latestRoundEffectivenessEntries: [],
                 effectivenessHistory: {}, effectivenessHistoryEntries: {},
                 bestWinOpponent: null, bestWinRating: -Infinity,
@@ -1651,11 +1651,11 @@ function processData(currentRoundIdOverride = null) {
         // 1. Increment Counters & Set Last Played FIRST
         // This ensures we can calculate the K-factor for the *current* match index correctly later.
         if (isDoubles) {
-            pNamesA.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; });
-            pNamesB.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; });
+            pNamesA.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; players[n].lastPlayedSeason = match.season || null; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; sb.lastPlayedSeason = match.season || null; });
+            pNamesB.forEach(n => { players[n].dMatches++; players[n].lastPlayed = match.round; players[n].lastPlayedSeason = match.season || null; const sb = getSeasonBucket(players[n], match.season); sb.dMatches++; sb.lastPlayed = match.round; sb.lastPlayedSeason = match.season || null; });
         } else {
-            pNamesA.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; });
-            pNamesB.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; });
+            pNamesA.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; players[n].lastPlayedSeason = match.season || null; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; sb.lastPlayedSeason = match.season || null; });
+            pNamesB.forEach(n => { players[n].matches++; players[n].lastPlayed = match.round; players[n].lastPlayedSeason = match.season || null; const sb = getSeasonBucket(players[n], match.season); sb.matches++; sb.lastPlayed = match.round; sb.lastPlayedSeason = match.season || null; });
         }
 
         // 2. Calculate Team Ratings (Average for Doubles, Single for Singles)
@@ -4364,7 +4364,7 @@ function renderRatingPage() {
     // Stats scope: all seasons (default) or current season only. Rating itself is always all-seasons.
     let seasonOnly = false;
     const EMPTY_SEASON_STATS = { matches: 0, wins: 0, losses: 0, setsWin: 0, setsLose: 0, dMatches: 0, dWins: 0, dLosses: 0,
-        bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A' };
+        bestWinOpponent: null, bestWinRating: -Infinity, lastPlayed: 'N/A', lastPlayedSeason: null };
     const statsOf = (p) => {
         if (!seasonOnly) return p;
         return (p.bySeason && p.bySeason[currentSeason || 'N/A']) || EMPTY_SEASON_STATS;
@@ -4386,7 +4386,7 @@ function renderRatingPage() {
             const total = (s.setsWin || 0) + (s.setsLose || 0);
             return total > 0 ? ((s.setsWin || 0) / total) * 100 : 0;
         };
-        const getLastPlayedNum = (p) => getRoundNumFromStr(statsOf(p).lastPlayed);
+        const getLastPlayedOrder = (p) => { const s = statsOf(p); return getSeasonOrder(s.lastPlayedSeason) * 10000 + getRoundOrderFromStr(s.lastPlayed); };
         const getBestWinRating = (p) => { const r = statsOf(p).bestWinRating; return (typeof r === 'number' && !isNaN(r)) ? r : -Infinity; };
 
         const valueForKey = (p, key) => {
@@ -4429,7 +4429,7 @@ function renderRatingPage() {
                 case 'best_win':
                     return getBestWinRating(p);
                 case 'last_played':
-                    return getLastPlayedNum(p);
+                    return getLastPlayedOrder(p);
                 case 'max_rating':
                     return p.maxRating || 0;
                 case 'min_rating':
@@ -4622,7 +4622,7 @@ function renderRatingPage() {
                 <td class="border-left-thick">${st.matches}</td><td>${st.wins}</td><td>${st.losses}</td>
                 <td>${st.setsWin}:${st.setsLose}</td><td>${successMatches}</td><td>${successSets}</td>
                 <td class="border-left-thick">${st.dMatches}</td><td>${st.dWins}</td><td>${st.dLosses}</td>
-                <td class="border-left-thick">${bestWinStr}</td><td>${st.lastPlayed}</td>
+                <td class="border-left-thick">${bestWinStr}</td><td>${st.lastPlayed}${st.lastPlayedSeason ? ` (${st.lastPlayedSeason})` : ''}</td>
                 <td>${p.maxRating.toFixed(2)}</td><td>${p.minRating.toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
