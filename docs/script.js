@@ -9634,8 +9634,9 @@ function initMobileNav() {
     });
 }
 
-// Add this to your existing window load event
-window.addEventListener('load', renderNavigation);
+// Build the nav as soon as the DOM is ready. `load` would wait for every async asset
+// (e.g. MathJax and its fonts on the rating page), so the header showed up late.
+document.addEventListener('DOMContentLoaded', renderNavigation);
 
 // Set current year in footer
 document.addEventListener('DOMContentLoaded', () => {
