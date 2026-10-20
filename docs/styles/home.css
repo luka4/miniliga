@@ -6,6 +6,26 @@
   margin: 0 auto 40px auto;
 }
 
+/* Unofficial-site note (under the nav) */
+.official-note {
+  max-width: 1000px;
+  margin: 12px auto 0;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.official-note a {
+  color: var(--color-text-subtle);
+  text-decoration: underline;
+}
+
+.official-note a:hover {
+  color: var(--color-text);
+}
+
 /* Disclaimer banner */
 .disclaimer-container {
   max-width: 1000px;
