@@ -21,11 +21,13 @@
 }
 
 .info-trigger {
+  /* Clickable area = the text only, still centered */
+  width: fit-content;
   text-align: center;
   color: var(--color-primary);
   cursor: pointer;
   font-size: 0.9em;
-  margin-bottom: 15px;
+  margin: 0 auto 15px;
   text-decoration: underline;
   flex-shrink: 0;
   font-weight: 600;
