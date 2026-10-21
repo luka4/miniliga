@@ -5747,7 +5747,6 @@ function renderTablePage() {
         wrapper.className = 'table-section';
 
         const title = document.createElement('h2');
-        title.style.cssText = "color: var(--color-primary); margin: 25px 0 10px 0; padding-left: 5px; border-left: 4px solid var(--color-primary);";
         title.innerText = def.title;
         wrapper.appendChild(title);
 
@@ -9592,7 +9591,8 @@ function renderNavigation() {
         return `<a href="${link.url}" class="mobile-nav-link${isActive ? ' active' : ''}" style="--stagger-index: ${index}">${link.text}</a>`;
     };
 
-    // Note: The H1 tag is used for SEO, except on the home page where the hero carries the h1
+    // Note: The H1 tag is used for SEO, except on pages whose hero/header band carries the h1
+    const hasPageTitle = !!document.querySelector('.hero__name, .page-hero__title');
     navContainer.innerHTML = `
     <nav class="top-nav" id="mainNav">
         <!-- Hamburger menu button (mobile only) -->
@@ -9601,9 +9601,9 @@ function renderNavigation() {
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
-        <${page === 'index.html' ? 'div' : 'h1'} class="nav-title">
+        <${hasPageTitle ? 'div' : 'h1'} class="nav-title">
             <a href="index.html">Miniliga</a>
-        </${page === 'index.html' ? 'div' : 'h1'}>
+        </${hasPageTitle ? 'div' : 'h1'}>
         <div class="nav-badge" id="navBadge">Aktualizované:<br>22.12.2025</div>
         <!-- Desktop nav links -->
         <div class="nav-links">

@@ -1,38 +1,4 @@
-/* Table page (table.html) */
-
-#page-table .container {
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-#page-table h2 {
-  text-align: center;
-  color: var(--color-text);
-  margin: 20px 0 20px 0;
-  font-size: 1.8em;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.table-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.table-page-header h2 {
-  margin-bottom: 0;
-}
-
-.table-view-toggle {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-}
-
+/* Table page (table.html): base table rules; the sport look is in sport.css */
 .table-wrapper {
   background: var(--color-surface);
   border-radius: var(--radius-md);

@@ -10,9 +10,10 @@
     <link rel="stylesheet" href="styles/loader2.css">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/table.css">
+    <link rel="stylesheet" href="styles/sport.css?v=4">
     <link rel="canonical" href="https://miniliga.sk/table.html" />
 </head>
-<body id="page-table" class="loading">
+<body id="page-table" class="loading sport">
 <div id="pageLoader">
     <div class="loader">
         <div class="scene">
@@ -28,15 +29,18 @@
 
 <div id="pageContent">
     <div id="mainNavContainer"></div>
-    <div class="container" id="mainContainer">
-        <div class="table-page-header">
-            <h2>Tabuľka Ligy</h2>
+    <header class="page-hero">
+        <h1 class="page-hero__title">Tabuľka</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Tabuľka ligy podľa sezón a skupín.</p>
             <label class="match-details-toggle table-view-toggle" title="Prepnúť zobrazenie tabuľky">
                 <input type="checkbox" id="tableViewToggle" aria-label="Prepínač zobrazenia tabuľky">
                 <span class="match-details-toggle__slider"></span>
                 <span class="match-details-toggle__text" id="tableViewToggleText">Rozdelené zobrazenie</span>
             </label>
         </div>
+    </header>
+    <div class="container page-container" id="mainContainer">
         <div id="tablesContainer"></div>
     </div>
 
@@ -74,7 +78,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=1"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=27"></script>
+<script src="script.js?v=28"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>
