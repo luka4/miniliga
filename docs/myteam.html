@@ -13,9 +13,11 @@
     <link rel="stylesheet" href="styles/mystats.css">
     <link rel="stylesheet" href="styles/prediction.css">
     <link rel="stylesheet" href="styles/myteam.css">
+    <link rel="stylesheet" href="styles/sport.css?v=4">
+    <link rel="stylesheet" href="styles/sport-pages.css?v=1">
     <link rel="canonical" href="https://miniliga.sk/myteam.html" />
 </head>
-<body id="page-myteam" class="loading">
+<body id="page-myteam" class="loading sport sport-pages">
 
 <div id="pageLoader">
     <div class="loader">
@@ -33,11 +35,17 @@
 <div id="pageContent">
     <div id="mainNavContainer"></div>
 
-    <div class="container" id="mainContainer">
+    <header class="page-hero">
+        <h1 class="page-hero__title">Môj tím</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Štatistiky, zostava, forma a predikcie vášho tímu.</p>
+        </div>
+    </header>
+
+    <div class="container page-container" id="mainContainer">
         <!-- Team Selection Section (shown when no team selected) -->
         <section id="teamSelectSection" class="mystats-card mystats-card--welcome">
-            <div class="welcome-icon">🏆</div>
-            <h2>Môj Tím</h2>
+            <h2>Vyberte tím</h2>
             <p class="welcome-text">Vyberte si tím a zobrazte štatistiky, grafy a záznamy vášho tímu.</p>
             <div class="player-select-form">
                 <label for="myTeamSelect">Váš tím:</label>
@@ -57,7 +65,7 @@
                         <img id="myTeamLogoImg" src="" alt="Team logo" style="display: none; width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
                     </div>
                     <div class="mystats-header-info">
-                        <h1 class="mystats-name" id="myTeamName">-</h1>
+                        <h2 class="mystats-name" id="myTeamName">-</h2>
                         <div class="mystats-team" id="myTeamSubtitle">Tímové štatistiky</div>
                     </div>
                 </div>
@@ -68,7 +76,7 @@
 
             <!-- Core Stats Block -->
             <section id="section-overview" class="mystats-card">
-                <h3 class="mystats-section-title">📊 Prehľad</h3>
+                <h3 class="mystats-section-title">Prehľad</h3>
                 <div class="core-stats-grid">
                     <div class="core-stat core-stat--primary">
                         <div class="core-stat-value" id="myTeamActiveRating">-</div>
@@ -93,13 +101,13 @@
 
             <!-- Players Section -->
             <section id="section-players" class="mystats-card">
-                <h3 class="mystats-section-title">👥 Hráči</h3>
+                <h3 class="mystats-section-title">Hráči</h3>
                 <div id="myTeamPlayersList" class="team-players-list"></div>
             </section>
 
             <!-- Team Rating Chart -->
             <section id="section-rating" class="mystats-card">
-                <h3 class="mystats-section-title">📈 Vývoj Ratingu</h3>
+                <h3 class="mystats-section-title">Vývoj Ratingu</h3>
                 <div class="chart-container">
                     <canvas id="myTeamRatingChart"></canvas>
                 </div>
@@ -107,7 +115,7 @@
 
             <!-- Compare Section -->
             <section id="section-compare" class="mystats-card">
-                <h3 class="mystats-section-title">⚔️ Porovnanie</h3>
+                <h3 class="mystats-section-title">Porovnanie</h3>
                 <div class="compare-section">
                     <form id="myTeamCompareForm" class="compare-form">
                         <select id="myTeamCompareInput">
@@ -122,7 +130,7 @@
 
             <!-- Prediction Section -->
             <section id="section-prediction" class="mystats-card">
-                <h3 class="mystats-section-title">🎯 Predikcia</h3>
+                <h3 class="mystats-section-title">Predikcia</h3>
                 <div class="team-prediction-wrapper">
                     <div class="pred-controls">
                         <div class="team-select-row team-select-row--right">
@@ -173,7 +181,7 @@
 
             <!-- Upcoming Section -->
             <section id="section-upcoming" class="mystats-card">
-                <h3 class="mystats-section-title">📅 Nadchádzajúce</h3>
+                <h3 class="mystats-section-title">Nadchádzajúce</h3>
                 <div id="myTeamUpcomingSection">
                     <div id="myTeamNextMatch" class="next-match-card">
                         <div class="next-match-title">Najbližší zápas tímu</div>
@@ -189,7 +197,7 @@
 
             <!-- Match History (Recent) -->
             <section id="section-matches" class="mystats-card">
-                <h3 class="mystats-section-title">📜 Posledné Zápasy</h3>
+                <h3 class="mystats-section-title">Posledné Zápasy</h3>
                 <div id="myTeamRecentMatches"></div>
                 <div id="myTeamShowAllMatchesContainer" class="show-all-matches-container" style="display: none;">
                     <button id="myTeamShowAllMatchesBtn" class="show-all-matches-btn">Zobraziť všetky zápasy</button>

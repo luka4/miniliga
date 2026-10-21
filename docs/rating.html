@@ -11,10 +11,11 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="stylesheet" href="styles/loader.css">
     <link rel="stylesheet" href="styles/shared.css">
-    <link rel="stylesheet" href="styles/rating.css?v=1">
+    <link rel="stylesheet" href="styles/rating.css?v=2">
+    <link rel="stylesheet" href="styles/sport.css?v=4">
     <link rel="canonical" href="https://miniliga.sk/rating.html" />
 </head>
-<body id="page-rating" class="loading">
+<body id="page-rating" class="loading sport">
 
 <div id="pageLoader">
     <div class="loader">
@@ -32,16 +33,20 @@
 <div id="pageContent">
     <div id="mainNavContainer"></div>
 
-    <div class="container" id="mainContainer">
-        <h2>Aktuálny Rating Hráčov</h2>
-        <div class="info-trigger" onclick="openInfoModal()">ⓘ Ako funguje Rating?</div>
-        <div class="match-details-header">
+    <header class="page-hero">
+        <h1 class="page-hero__title">Rating</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Aktuálny rating hráčov a ich štatistiky.</p>
+            <button type="button" class="info-trigger" onclick="openInfoModal()">Ako funguje rating?</button>
             <label class="match-details-toggle" title="Rating zostáva celkový, štatistiky sa počítajú len z aktuálnej sezóny">
                 <input type="checkbox" id="seasonOnlyToggle">
                 <span class="match-details-toggle__slider"></span>
                 <span class="match-details-toggle__text">Štatistiky len z aktuálnej sezóny</span>
             </label>
         </div>
+    </header>
+
+    <div class="container page-container" id="mainContainer">
         <div class="scroll-hint">↔ Posuňte tabuľku pre viac štatistík</div>
         <div class="table-wrapper" id="mainTableWrapper">
             <table id="mainTable">
@@ -144,7 +149,7 @@
                 <div class="info-title">Ako funguje Rating?</div>
 
                 <div class="info-section" style="background-color: var(--color-info-soft); padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-                    <b>💡 Tip:</b> Kliknutím na meno hráča v tabuľke zobrazíte jeho <b>detailný profil</b> – grafy vývoja ratingu, koláčové grafy úspešnosti a kompletnú históriu zápasov.
+                    <b>Tip:</b> Kliknutím na meno hráča v tabuľke zobrazíte jeho <b>detailný profil</b> – grafy vývoja ratingu, koláčové grafy úspešnosti a kompletnú históriu zápasov.
                 </div>
 
                 <div class="info-section">

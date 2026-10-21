@@ -32,7 +32,7 @@
     const DISMISS_DAYS = 7;
 
     // Pages that are not for visitors get nothing.
-    const EXCLUDED_PAGE_IDS = ['page-admin'];
+    const EXCLUDED_PAGE_IDS = [];
 
     const ARROW_SVG = `
         <svg class="spinbook-promo__arrow" viewBox="0 0 24 24" width="16" height="16" fill="none"
