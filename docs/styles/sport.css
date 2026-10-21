@@ -132,7 +132,7 @@ body.sport {
 /* Result from the viewed team's side: blue win, grey draw, coral loss */
 body.sport {
   --win: #7db8ff;
-  --draw: #d5dbe4;
+  --draw: #f3cf5f;
   --loss: #f4868f;
 }
 
