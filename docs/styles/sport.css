@@ -129,14 +129,21 @@ body.sport {
   letter-spacing: 0.04em;
 }
 
-.sport .score-badge--win,
-.sport .score-badge--draw,
-.sport .score-badge--loss {
-  background: var(--ink) !important;
-  color: var(--sky) !important;
+/* Result from the viewed team's side: blue win, grey draw, coral loss */
+body.sport {
+  --win: #7db8ff;
+  --draw: #d5dbe4;
+  --loss: #f4868f;
 }
 
-.sport .match-row:hover .score-badge { background: var(--sky) !important; color: var(--ink) !important; }
+.sport .score-badge--win { background: var(--win) !important; color: var(--ink) !important; }
+.sport .score-badge--draw { background: var(--draw) !important; color: var(--ink) !important; }
+.sport .score-badge--loss { background: var(--loss) !important; color: var(--ink) !important; }
+
+.sport .match-row:hover .score-badge:not(.score-badge--win):not(.score-badge--draw):not(.score-badge--loss) {
+  background: var(--sky) !important;
+  color: var(--ink) !important;
+}
 
 .sport .score-badge.score-badge--vs {
   background: var(--ground);
@@ -576,9 +583,11 @@ body.sport .results-filter-btn--clear:hover { background: var(--ink-3); opacity:
 
 #page-table .history-row { border: 0; padding: 7px 12px; }
 #page-table .hr-score { font-family: var(--font-display); font-weight: 400; font-size: 22px; }
-#page-table .score-win { color: var(--ink); }
-#page-table .score-loss { color: #6b7280; }
-#page-table .score-draw { color: var(--ink-3); }
+#page-table .hr-score { min-width: 64px; padding: 4px 6px 2px; color: var(--ink); }
+#page-table .hr-score.score-win { background: var(--win); }
+#page-table .hr-score.score-draw { background: var(--draw); }
+#page-table .hr-score.score-loss { background: var(--loss); }
+#page-table .hr-score[style] { background: transparent; }
 #page-table .team-logo-banner-wrapper,
 #page-table .team-logo-large { border-radius: 0; background: transparent; }
 
