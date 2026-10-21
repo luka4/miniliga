@@ -2418,6 +2418,34 @@ function initFlipCards(root = document) {
 }
 
 // --- HOME PAGE ---
+// --- HOME HERO: live league pulse (round, rating leader, best performance, most effective player) ---
+function renderHomeHero({ players, currentRoundId, playedMatches, upcomingMatches }) {
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    const roundMatches = currentRoundId ? matchResults.filter(m => getMatchRoundId(m) === currentRoundId) : [];
+    const sample = roundMatches[0] || null;
+
+    setText('heroRound', sample ? sample.round : '–');
+    setText('heroSeason', sample && sample.season ? sample.season.charAt(0) + sample.season.slice(1).toLowerCase() : 'Zatiaľ žiadne zápasy');
+
+    // Rating leader among players who played in the current season
+    const season = sample ? sample.season : null;
+    const list = Object.values(players);
+    const pool = list.filter(p => p.matches > 0 && (!season || p.lastPlayedSeason === season));
+    const leader = (pool.length ? pool : list.filter(p => p.matches > 0)).sort((a, b) => b.rating - a.rating)[0];
+    setText('heroLeaderName', leader ? leader.name : '–');
+    setText('heroLeaderMeta', leader ? `${Math.round(leader.rating)} rating · ${leader.team}` : '');
+
+    // Best performance of the round
+    const best = list.filter(p => p.roundGain > 0).sort((a, b) => b.roundGain - a.roundGain)[0];
+    setText('heroGainName', best ? best.name : '–');
+    setText('heroGainMeta', best ? `+${best.roundGain.toFixed(1)} rating · ${best.team}` : 'V tomto kole zatiaľ nikto');
+
+    // Most effective player of the round
+    const eff = list.filter(p => Number.isFinite(p.latestRoundEffectiveness)).sort((a, b) => b.latestRoundEffectiveness - a.latestRoundEffectiveness)[0];
+    setText('heroEffName', eff ? eff.name : '–');
+    setText('heroEffMeta', eff ? `${eff.latestRoundEffectiveness.toFixed(1)} efektivita · ${eff.team}` : 'V tomto kole zatiaľ nikto');
+}
+
 function renderHomePage() {
     // Load disclaimer from Google Sheets (Config!B3)
     const loadDisclaimerFromSheet = async () => {
@@ -2463,6 +2491,14 @@ function renderHomePage() {
     const playerArr = Object.values(players);
     const teamMap = buildTeamMap(playerArr);
 
+    // Hero pulse
+    renderHomeHero({
+        players,
+        currentRoundId,
+        playedMatches,
+        upcomingMatches: matchResults.filter(m => !isPlayedMatch(m) && getMatchRoundId(m) !== currentRoundId)
+    });
+
     // Stats
     const uniqueTeamMatches = new Set(playedMatches.map(m => `${getMatchRoundId(m)}_${m.player_a_team}_${m.player_b_team}`));
     document.getElementById('totalRounds').innerText = roundsSet.size;
@@ -2490,8 +2526,6 @@ function renderHomePage() {
         const points = totalSets * 18;
         setsBack.innerText = `Ak má jeden set v priemere ~18 lôpt, tak sa odohralo približne ${points} lôpt.`;
     }
-
-    initFlipCards(document.getElementById('mainContainer') || document);
 
     const currentTitleText = currentRoundId ? (() => {
         // Prefer the round name from any match in that round; fall back to legacy string.
@@ -3638,7 +3672,7 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
                 
                 predictionHtml = `<div class="match-prediction-section">
-                    <div class="prediction-label">Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase):</div>
+                    <div class="prediction-label" title="Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase)">Predikcia</div>
                     <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
                 </div>`;
             }
@@ -3977,7 +4011,7 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
                 
                 predictionHtml = `<div class="match-prediction-section">
-                    <div class="prediction-label">Predikcia pred zápasom (použitý aktívny rating - priemerný rating 4 najaktívnejších hráčov):</div>
+                    <div class="prediction-label" title="Predikcia pred zápasom (použitý aktívny rating - priemerný rating 4 najaktívnejších hráčov)">Predikcia</div>
                     <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
                 </div>`;
 
@@ -9558,7 +9592,7 @@ function renderNavigation() {
         return `<a href="${link.url}" class="mobile-nav-link${isActive ? ' active' : ''}" style="--stagger-index: ${index}">${link.text}</a>`;
     };
 
-    // Note: The H1 tag is used for SEO (as discussed previously)
+    // Note: The H1 tag is used for SEO, except on the home page where the hero carries the h1
     navContainer.innerHTML = `
     <nav class="top-nav" id="mainNav">
         <!-- Hamburger menu button (mobile only) -->
@@ -9567,9 +9601,9 @@ function renderNavigation() {
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
-        <h1 class="nav-title">
-            <a href="index.html">Košická Miniliga</a>
-        </h1>
+        <${page === 'index.html' ? 'div' : 'h1'} class="nav-title">
+            <a href="index.html">Miniliga</a>
+        </${page === 'index.html' ? 'div' : 'h1'}>
         <div class="nav-badge" id="navBadge">Aktualizované:<br>22.12.2025</div>
         <!-- Desktop nav links -->
         <div class="nav-links">

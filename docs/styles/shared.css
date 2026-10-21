@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&display=swap');
+
 :root {
   /* Typography */
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Anton", "Impact", "Arial Narrow", sans-serif;
 
   /* Colors */
   --color-bg: #f8fafc;
@@ -29,6 +32,8 @@
 
   --color-accent-3: #84cc16;       /* lime */
   --color-accent-3-hover: #65a30d; /* lime hover */
+
+  --color-highlight: #7db8ff;      /* light blue: active nav tab, footer headings */
 
   --color-success: #16a34a;
   --color-danger: #dc2626;
@@ -113,21 +118,25 @@ a {
   top: 0;
   left: 0;
   width: 100%;
+  height: 56px;
   z-index: 5000;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 24px;
+  background: var(--color-primary);
   color: var(--color-text-inverse);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  padding: 10px 0;
-  text-align: center;
-  transform: translateZ(0);
 }
 
 .nav-title {
-  font-size: 1.4em;
-  font-weight: 800;
+  margin: 0;
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 0 0 8px;
+  letter-spacing: 0.01em;
 }
 
 .nav-title a {
@@ -135,69 +144,79 @@ a {
   text-decoration: none;
 }
 
+.nav-title a:hover {
+  color: var(--color-highlight);
+}
+
 .nav-badge {
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: var(--color-pill-bg);
-  color: var(--color-pill-text);
-  padding: 5px 10px;
-  border-radius: 12px;
-  font-size: 0.8em;
-  font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  white-space: nowrap;
-  z-index: 5002;
-  line-height: 1.2;
+  order: 3;
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-muted-2);
   text-align: right;
+  white-space: nowrap;
 }
 
 .nav-badge.nav-badge--xmas {
-  padding-left: 40px; /* room for Santa */
+  padding-left: 32px;
+  position: relative;
 }
 
 .nav-badge.nav-badge--xmas::before {
   content: "";
   position: absolute;
-  left: 8px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
   /* Inline SVG "Santa head" (no external assets). */
   background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2764%27%20height%3D%2764%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cpath%20d%3D%27M18%2026c0-11%208-20%2018-20%207%200%2013%204%2016%2010l-9%204c-2-3-4-5-7-5-6%200-10%205-10%2011v4h-8v-4z%27%20fill%3D%27%23d32f2f%27/%3E%3Ccircle%20cx%3D%2749%27%20cy%3D%2715%27%20r%3D%276%27%20fill%3D%27%23ffffff%27/%3E%3Crect%20x%3D%2718%27%20y%3D%2724%27%20width%3D%2734%27%20height%3D%278%27%20rx%3D%274%27%20fill%3D%27%23ffffff%27/%3E%3Ccircle%20cx%3D%2735%27%20cy%3D%2740%27%20r%3D%2714%27%20fill%3D%27%23f2c39b%27/%3E%3Cpath%20d%3D%27M21%2042c3%2018%2028%2018%2031%200c-2%201-6%202-10%202H31c-4%200-8-1-10-2z%27%20fill%3D%27%23ffffff%27/%3E%3Ccircle%20cx%3D%2730%27%20cy%3D%2738%27%20r%3D%272%27%20fill%3D%27%23333333%27/%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2738%27%20r%3D%272%27%20fill%3D%27%23333333%27/%3E%3Ccircle%20cx%3D%2735%27%20cy%3D%2742%27%20r%3D%272%27%20fill%3D%27%23e6a27d%27/%3E%3C/svg%3E");
 }
 
 .nav-links {
+  order: 2;
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  align-items: stretch;
+  gap: 4px;
+  height: 100%;
 }
 
 .nav-links a {
-  color: rgba(255, 255, 255, 0.8);
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.78);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 1em;
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-links a:hover {
-  background-color: rgba(255, 255, 255, 0.2);
   color: var(--color-text-inverse);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .nav-links a.active {
-  background-color: var(--color-surface);
+  background-color: var(--color-highlight);
   color: var(--color-primary);
+}
+
+@media screen and (max-width: 1180px) {
+  .top-nav { gap: 16px; padding: 0 16px; }
+  .nav-links a { padding: 0 8px; font-size: 15px; }
+  .nav-badge { display: none; }
 }
 
 /* ============================================================
@@ -211,7 +230,7 @@ a {
   display: none;
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 900px) {
   /* Hamburger button */
   .hamburger-btn {
     display: flex;
@@ -227,6 +246,7 @@ a {
     height: 40px;
     background: transparent;
     border: none;
+    border-radius: 0;
     cursor: pointer;
     z-index: 5003;
     padding: 8px;
@@ -260,11 +280,14 @@ a {
   }
 
   /* Adjust nav title to be centered */
+  .top-nav {
+    justify-content: center;
+    padding: 0 12px;
+  }
+
   .nav-title {
-    margin: 0;
     text-align: center;
-    width: 100%;
-    font-size: 1.15em;
+    font-size: 26px;
   }
 
   /* Date only on mobile */
@@ -274,20 +297,20 @@ a {
 
   /* Badge positioning for mobile */
   .nav-badge {
+    display: block;
+    position: absolute;
+    right: 16px;
     top: 50%;
-    right: 10px;
     transform: translateY(-50%);
-    padding: 2px 6px;
-    font-size: 0.6em;
-    border-radius: var(--radius-sm);
+    margin: 0;
+    font-size: 13px;
   }
 
   .nav-badge.nav-badge--xmas {
-    padding-left: 26px;
+    padding-left: 22px;
   }
 
   .nav-badge.nav-badge--xmas::before {
-    left: 4px;
     width: 18px;
     height: 18px;
   }
@@ -318,15 +341,14 @@ a {
     position: fixed;
     top: 0;
     left: 0;
-    width: 40%;
-    max-width: 200px;
+    width: 72%;
+    max-width: 300px;
     height: 100%;
-    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    background: var(--color-primary);
     z-index: 5001;
     transform: translateX(-100%);
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
-    padding-top: 80px;
+    padding-top: 72px;
   }
 
   .mobile-nav-sidebar.open {
@@ -344,11 +366,11 @@ a {
   .mobile-nav-link {
     color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 1.05em;
+    font-family: var(--font-display);
+    font-size: 28px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 16px 24px;
+    letter-spacing: 0.01em;
+    padding: 12px 24px;
     transition: background-color 0.2s, transform 0.2s;
     opacity: 0;
     transform: translateX(-20px);
@@ -360,9 +382,8 @@ a {
   }
 
   .mobile-nav-link.active {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: var(--color-text-inverse);
-    border-left: 3px solid var(--color-pill-bg);
+    background-color: var(--color-highlight);
+    color: var(--color-primary);
   }
 
   /* Staggered animation for menu items */
@@ -1503,97 +1524,103 @@ a {
    Footer
    ============================================================ */
 .site-footer {
-  margin-top: 60px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 64px;
   background-color: var(--color-primary);
   color: var(--color-text-inverse);
-  padding: 40px 0 20px;
-  border-top: 3px solid var(--color-accent);
+  padding: 40px 24px 0;
 }
 
 .footer-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 40px;
-  margin-bottom: 30px;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
 }
 
 .footer-section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
-.footer-title {
-  font-size: 1.5em;
-  font-weight: 800;
+.footer-title,
+.footer-heading {
   margin: 0;
-  color: var(--color-text-inverse);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.02em;
+  color: var(--color-highlight);
 }
 
 .footer-description {
-  font-size: 0.9em;
-  line-height: 1.6;
+  max-width: 46ch;
+  font-size: 16px;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.85);
   margin: 0;
 }
 
-.footer-heading {
-  font-size: 1.1em;
-  font-weight: 700;
-  margin: 0;
+.footer-description a,
+.footer-text a {
   color: var(--color-text-inverse);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .footer-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .footer-link {
+  align-self: flex-start;
   color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
-  font-size: 0.95em;
+  font-size: 16px;
   transition: color 0.2s, transform 0.2s;
-  display: inline-block;
 }
 
 .footer-link:hover {
-  color: var(--color-text-inverse);
-  transform: translateX(5px);
+  color: var(--color-highlight);
+  transform: translateX(6px);
 }
 
 .footer-text {
-  font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.75);
-  margin: 5px 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
   line-height: 1.5;
 }
 
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 20px;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-bottom: 20px;
 }
 
-.footer-copyright {
-  font-size: 0.85em;
+.footer-copyright,
+.footer-cookies-link {
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
   margin: 0;
 }
 
-.footer-cookies-link {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 0.85em;
+.footer-credit {
+  flex: 1 1 320px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.footer-credit a { color: inherit; }
+
+.footer-cookies-link {
   text-decoration: underline;
   transition: color 0.2s;
 }
@@ -1603,26 +1630,11 @@ a {
 }
 
 @media screen and (max-width: 768px) {
-  .footer-container {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    padding: 0 4%;
-  }
-
-  .footer-section {
-    text-align: center;
-  }
-
-  .footer-nav {
-    align-items: center;
-  }
-
-  .footer-link:hover {
-    transform: none;
-  }
+  .site-footer { padding: 32px 16px 0; margin-top: 48px; }
+  .footer-container { grid-template-columns: 1fr 1fr; gap: 32px 16px; margin-bottom: 48px; }
+  .footer-container .footer-section:first-child { grid-column: 1 / -1; }
+  .footer-link:hover { transform: none; }
 }
-
-
 
 /* ============================================================
    Cookie banner (injected by cookie-consent.js)
@@ -1718,90 +1730,39 @@ a {
    SpinBook promo (injected by spinbook-promo.js)
    ============================================================ */
 
-/* Icon at the right end of the header, beside the "Aktualizované" badge. */
+/* Icon at the right end of the header, after the "Aktualizované" badge. */
 .nav-spinbook {
-  position: absolute;
-  right: 10px;
-  top: 6px;
-  z-index: 5002;
+  order: 4;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  width: 36px;
+  height: 36px;
+  background-color: rgba(255, 255, 255, 0.1);
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .nav-spinbook:hover {
-  background-color: rgba(255, 255, 255, 0.32);
-  transform: scale(1.06);
+  background-color: var(--color-highlight);
+  transform: translateY(-2px);
 }
 
 .nav-spinbook img {
   display: block;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 0;
 }
 
-/* The badge steps left to make room - only once the icon is really there -
-   and both sit up in the title band, clear of the row of links below. The
-   badge used to be centred on the whole bar and ran over the last link from
-   about 1300px down; the links now have the full width back. */
-.top-nav.has-spinbook .nav-badge {
-  right: 54px;
-  top: 2px;
-  transform: none;
+@media (max-width: 1180px) {
+  .nav-spinbook { margin-left: auto; }
 }
 
-/* Just above the phone breakpoint the centred title reaches the badge, so
-   the pair takes a little less width. */
-@media (max-width: 760px) {
-  .nav-spinbook {
-    right: 6px;
-    top: 8px;
-    width: 30px;
-    height: 30px;
-  }
-
-  .nav-spinbook img {
-    width: 26px;
-    height: 26px;
-  }
-
-  .top-nav.has-spinbook .nav-badge {
-    right: 42px;
-  }
-}
-
-@media (max-width: 600px) {
-  /* The header bar is one short row on a phone, shared with the hamburger,
-     the title and the badge, so the icon is dropped here - the labelled
-     entry in the sidebar menu below carries the promo instead. */
+@media (max-width: 900px) {
+  /* The bar is one short row on a phone: the sidebar menu carries the promo. */
   .nav-spinbook {
     display: none;
-  }
-
-  /* With no icon in the bar, the badge sits back where it does on pages the
-     promo never touches. */
-  .top-nav.has-spinbook .nav-badge {
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  /* The centred title reaches the badge on its own on a phone, so it stays
-     over beside the hamburger - with the room the icon used to take given
-     back to it. */
-  .top-nav.has-spinbook .nav-title {
-    text-align: left;
-    padding-left: 56px;
-    padding-right: 110px;
-    font-size: 0.95em;
-    letter-spacing: 0.5px;
   }
 
   /* Ten entries no longer fit on a short phone, so the menu can scroll. */
@@ -1813,15 +1774,15 @@ a {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 4px;
-    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    margin-top: 12px;
     padding-top: 18px;
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
   .mobile-nav-link--spinbook img {
     width: 22px;
     height: 22px;
-    border-radius: 6px;
+    border-radius: 0;
   }
 }
 
