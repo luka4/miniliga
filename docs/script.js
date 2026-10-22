@@ -287,7 +287,7 @@ function buildUpsetOfWeekAchievements(roundInfo) {
 function buildMarathonGuyAchievements(roundInfo) {
     const badgeDef = ACHIEVEMENT_DEFINITIONS.marathonGuy;
     const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
-    const roundMatches = (matchResults || []).filter(m => getMatchRoundId(m) === roundInfo.id && isPlayedMatch(m));
+    const roundMatches = getMatchesOfRound(roundInfo.id).filter(isPlayedMatch);
     const closeMatchesByPlayer = new Map();
 
     roundMatches.forEach(match => {
@@ -338,7 +338,7 @@ function buildMarathonGuyAchievements(roundInfo) {
 function buildMrThreeZeroAchievements(roundInfo) {
     const badgeDef = ACHIEVEMENT_DEFINITIONS.mrThreeZero;
     const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
-    const roundMatches = (matchResults || []).filter(m => getMatchRoundId(m) === roundInfo.id && isPlayedMatch(m));
+    const roundMatches = getMatchesOfRound(roundInfo.id).filter(isPlayedMatch);
     const cleanWinsByPlayer = new Map();
 
     roundMatches.forEach(match => {
@@ -396,7 +396,7 @@ function buildSilentKillerAchievements(roundInfo) {
 
     const qualifiedPlayers = Object.values(players)
         .map(player => {
-            const matchesThisRound = (player.matchDetails || []).filter(md => getMatchRoundId(md) === roundInfo.id);
+            const matchesThisRound = getMatchDetailsIndex(player.matchDetails || []).byRound.get(roundInfo.id) || [];
             if (matchesThisRound.length !== SILENT_KILLER_REQUIRED_MATCHES) return null;
 
             const noRatingDropInAnyMatch = matchesThisRound.every(md => Number.isFinite(md.delta_own) && md.delta_own >= 0);
@@ -439,15 +439,50 @@ function buildSilentKillerAchievements(roundInfo) {
     });
 }
 
+// `player.history` and `player.matchDetails` are final once processData has run and are shared
+// by every processData(roundId) result, so lookups that achievements repeat for every round
+// are parsed / indexed once per object.
+const parsedHistoryCache = new WeakMap();
+function getParsedHistory(history) {
+    let parsed = parsedHistoryCache.get(history);
+    if (!parsed) {
+        parsed = [];
+        Object.entries(history).forEach(([historyKey, rating]) => {
+            const orderingPart = String(historyKey || '').split('|')[0] || '';
+            const [seasonStr, roundStr] = orderingPart.split('-');
+            const seasonOrder = Number.parseInt(seasonStr, 10);
+            const roundOrder = Number.parseInt(roundStr, 10);
+            if (!Number.isFinite(seasonOrder) || !Number.isFinite(roundOrder) || !Number.isFinite(rating)) return;
+            parsed.push({seasonOrder, roundOrder, rating});
+        });
+        parsedHistoryCache.set(history, parsed);
+    }
+    return parsed;
+}
+
+const matchDetailsIndexCache = new WeakMap();
+function getMatchDetailsIndex(matchDetails) {
+    let index = matchDetailsIndexCache.get(matchDetails);
+    if (!index) {
+        index = {byRound: new Map(), firstRoundOrderBySeason: new Map()};
+        matchDetails.forEach(md => {
+            const roundId = getMatchRoundId(md);
+            if (!index.byRound.has(roundId)) index.byRound.set(roundId, []);
+            index.byRound.get(roundId).push(md);
+            const season = md.season || null;
+            const roundOrder = getRoundOrderFromStr(md.round);
+            const first = index.firstRoundOrderBySeason.get(season);
+            if (first === undefined || roundOrder < first) index.firstRoundOrderBySeason.set(season, roundOrder);
+        });
+        matchDetailsIndexCache.set(matchDetails, index);
+    }
+    return index;
+}
+
 function getPlayerRatingAtOrBeforeRound(player, targetSeasonOrder, targetRoundOrder) {
     if (!player || !player.history) return null;
     let best = null;
-    Object.entries(player.history).forEach(([historyKey, rating]) => {
-        const orderingPart = String(historyKey || '').split('|')[0] || '';
-        const [seasonStr, roundStr] = orderingPart.split('-');
-        const seasonOrder = Number.parseInt(seasonStr, 10);
-        const roundOrder = Number.parseInt(roundStr, 10);
-        if (!Number.isFinite(seasonOrder) || !Number.isFinite(roundOrder) || !Number.isFinite(rating)) return;
+    getParsedHistory(player.history).forEach(({seasonOrder, roundOrder, rating}) => {
         if (seasonOrder > targetSeasonOrder) return;
         if (seasonOrder === targetSeasonOrder && roundOrder > targetRoundOrder) return;
         if (!best || seasonOrder > best.seasonOrder || (seasonOrder === best.seasonOrder && roundOrder > best.roundOrder)) {
@@ -480,30 +515,33 @@ function getCurrentPlayedSeason() {
 // True when the player has at least one match in `season` (optionally only up to and including `maxRoundOrder`).
 function hasPlayedInSeason(player, season, maxRoundOrder = null) {
     if (!player || !Array.isArray(player.matchDetails)) return false;
-    return player.matchDetails.some(m => {
-        if ((m.season || null) !== (season || null)) return false;
-        return maxRoundOrder === null || getRoundOrderFromStr(m.round) <= maxRoundOrder;
-    });
+    const firstRoundOrder = getMatchDetailsIndex(player.matchDetails).firstRoundOrderBySeason.get(season || null);
+    if (firstRoundOrder === undefined) return false;
+    return maxRoundOrder === null || firstRoundOrder <= maxRoundOrder;
+}
+
+// All matches (played or not) grouped by round id. Achievements look at every round,
+// so scanning the whole match list per round adds up. Rebuilt if `matchResults` is replaced.
+let matchesByRoundIndex = null;
+function getMatchesOfRound(roundId) {
+    if (!matchesByRoundIndex || matchesByRoundIndex.source !== matchResults) {
+        const byRound = new Map();
+        (matchResults || []).forEach(m => {
+            const id = getMatchRoundId(m);
+            if (!byRound.has(id)) byRound.set(id, []);
+            byRound.get(id).push(m);
+        });
+        matchesByRoundIndex = {source: matchResults, byRound};
+    }
+    return matchesByRoundIndex.byRound.get(roundId) || [];
 }
 
 function isRoundFullyPlayedForBadges(roundId) {
-    const roundMatches = (matchResults || []).filter(m => getMatchRoundId(m) === roundId);
+    const roundMatches = getMatchesOfRound(roundId);
     if (!roundMatches.length) return false;
 
-    // Group by team fixture and require every game in every fixture to be played.
-    const fixtures = new Map();
-    roundMatches.forEach(m => {
-        const teamA = String(m.player_a_team || '').trim();
-        const teamB = String(m.player_b_team || '').trim();
-        const fixtureKey = [teamA, teamB].sort((a, b) => a.localeCompare(b, 'sk', {sensitivity: 'base'})).join('::');
-        if (!fixtures.has(fixtureKey)) fixtures.set(fixtureKey, []);
-        fixtures.get(fixtureKey).push(m);
-    });
-
-    for (const games of fixtures.values()) {
-        if (!games.every(isPlayedMatch)) return false;
-    }
-    return true;
+    // Every game of every team fixture in the round has to be played.
+    return roundMatches.every(isPlayedMatch);
 }
 
 function buildTopOfWorldAchievements(roundInfo, allPlayers) {
@@ -921,11 +959,13 @@ function ensurePlayerEffectivenessHistory(player) {
     return history;
 }
 
-// processData is expensive (~4k matches) and previously recomputed on every call.
-// Cache by round override so achievements / highlights reuse the same pass.
+// The Elo replay is expensive (~5k matches). It runs once (`processDataBase`); results are
+// cached by round override so achievements / highlights reuse the same pass.
 const processDataCache = new Map();
+let processDataBase = null;
 function clearProcessDataCache() {
     processDataCache.clear();
+    processDataBase = null;
     teamNameCanonicalIndex = null;
 }
 
@@ -1609,13 +1649,50 @@ function getThisWeekRoundId(matches, today = new Date()) {
     return entries[0][0];
 }
 
+// `currentRoundIdOverride` picks the round whose gain / effectiveness / upsets are reported
+// (default: the latest played round). Ratings and history don't depend on it.
 function processData(currentRoundIdOverride = null) {
     const cacheKey = currentRoundIdOverride == null ? '__default__' : String(currentRoundIdOverride);
     if (processDataCache.has(cacheKey)) return processDataCache.get(cacheKey);
 
+    if (!processDataBase) processDataBase = replayAllMatches();
+    const {players: basePlayers, roundsSet, totalSets, latestRoundName, latestRoundId, roundStats} = processDataBase;
+
+    // Use currentRoundIdOverride if provided (for determining which round's stats to show)
+    // Otherwise fall back to latestRoundId
+    const effectiveRoundId = currentRoundIdOverride || latestRoundId;
+    const round = roundStats.get(effectiveRoundId);
+
+    // Shallow copies: history, matchDetails etc. are shared with the base pass, only the
+    // round-specific fields differ between overrides.
+    const players = {};
+    Object.entries(basePlayers).forEach(([name, p]) => {
+        const entries = round?.effectivenessEntries.get(name) || [];
+        players[name] = {
+            ...p,
+            roundGain: round?.gains.get(name) || 0,
+            latestRoundEffectivenessEntries: entries,
+            // Only the latest-round value is needed for tables/highlights. Full history
+            // (binary search per player×round) is deferred via ensurePlayerEffectivenessHistory.
+            latestRoundEffectiveness: calculateRatingPerformance(entries),
+            effectivenessHistory: {},
+            _effectivenessHistoryReady: false
+        };
+    });
+    const upsetsList = round ? [...round.upsets] : [];
+
+    const result = {players, roundsSet, totalSets, latestRoundName, latestRoundId, upsetsList};
+    processDataCache.set(cacheKey, result);
+    return result;
+}
+
+// One pass over every played match. Per-round values (rating gain, effectiveness entries,
+// upsets) are collected for all rounds at once in `roundStats`, so achievements and the
+// highlights round picker don't need a full replay per round.
+function replayAllMatches() {
     const players = {};
     const roundsSet = new Set();
-    const upsetsList = [];
+    const roundStats = new Map(); // roundId -> {gains: Map(name -> gain), effectivenessEntries: Map(name -> entries[]), upsets: []}
     let totalSets = 0;
 
     // We only process PLAYED matches for ratings and stats
@@ -1626,10 +1703,6 @@ function processData(currentRoundIdOverride = null) {
     const latestRoundId = lastMatch ? getMatchRoundId(lastMatch) : null;
     // We keep latestRoundName for legacy display strings, but logic should use ID
     const latestRoundName = lastMatch ? lastMatch.round : "";
-    
-    // Use currentRoundIdOverride if provided (for determining which round's stats to show)
-    // Otherwise fall back to latestRoundId
-    const effectiveRoundId = currentRoundIdOverride || latestRoundId;
 
     const initPlayer = (nameRaw, teamName, matchGroup = '') => {
         const name = nameRaw.trim();
@@ -1658,13 +1731,13 @@ function processData(currentRoundIdOverride = null) {
     };
 
     playedMatches.forEach(match => {
-        roundsSet.add(getMatchRoundId(match));
+        const roundId = getMatchRoundId(match);
+        roundsSet.add(roundId);
         const scoreA = parseInt(match.score_a);
         const scoreB = parseInt(match.score_b);
         totalSets += (scoreA + scoreB);
 
         const isDoubles = match.doubles === true || match.doubles === "true";
-        const isLatestRound = getMatchRoundId(match) === effectiveRoundId;
 
         const pNamesA = match.player_a.split('/').map(n => n.trim());
         const pNamesB = match.player_b.split('/').map(n => n.trim());
@@ -1733,45 +1806,44 @@ function processData(currentRoundIdOverride = null) {
         const sOrder = getSeasonOrder(match.season);
         const sDisp = match.season ? ` (${match.season})` : '';
         const historyKey = `${sOrder}-${String(roundOrder).padStart(4, '0')}|${match.round}${sDisp}`;
+        if (!roundStats.has(roundId)) roundStats.set(roundId, {gains: new Map(), effectivenessEntries: new Map(), upsets: []});
+        const round = roundStats.get(roundId);
         const addEffectivenessEntry = (name, entry) => {
             const player = players[name];
             if (!player) return;
             if (!player.effectivenessHistoryEntries[historyKey]) player.effectivenessHistoryEntries[historyKey] = [];
             player.effectivenessHistoryEntries[historyKey].push(entry);
-            if (isLatestRound && Array.isArray(player.latestRoundEffectivenessEntries)) {
-                player.latestRoundEffectivenessEntries.push(entry);
-            }
+            if (!round.effectivenessEntries.has(name)) round.effectivenessEntries.set(name, []);
+            round.effectivenessEntries.get(name).push(entry);
         };
 
         pNamesA.forEach(n => addEffectivenessEntry(n, {opponentRating: Rb, scoreOwn: scoreA, totalSets: N}));
         pNamesB.forEach(n => addEffectivenessEntry(n, {opponentRating: Ra, scoreOwn: scoreB, totalSets: N}));
 
-        if (isLatestRound) {
-            // Filter out WO matches for upsets
-            if (!isDoubles && match.player_a !== 'WO' && match.player_b !== 'WO') {
-                if (scoreA > scoreB && Rb > Ra) {
-                    upsetsList.push({
-                        winner: pNamesA[0],
-                        wTeam: match.player_a_team,
-                        wRate: Ra,
-                        loser: pNamesB[0],
-                        lTeam: match.player_b_team,
-                        lRate: Rb,
-                        score: `${scoreA}:${scoreB}`,
-                        diff: Rb - Ra
-                    });
-                } else if (scoreB > scoreA && Ra > Rb) {
-                    upsetsList.push({
-                        winner: pNamesB[0],
-                        wTeam: match.player_b_team,
-                        wRate: Rb,
-                        loser: pNamesA[0],
-                        lTeam: match.player_a_team,
-                        lRate: Ra,
-                        score: `${scoreB}:${scoreA}`,
-                        diff: Ra - Rb
-                    });
-                }
+        // Filter out WO matches for upsets
+        if (!isDoubles && match.player_a !== 'WO' && match.player_b !== 'WO') {
+            if (scoreA > scoreB && Rb > Ra) {
+                round.upsets.push({
+                    winner: pNamesA[0],
+                    wTeam: match.player_a_team,
+                    wRate: Ra,
+                    loser: pNamesB[0],
+                    lTeam: match.player_b_team,
+                    lRate: Rb,
+                    score: `${scoreA}:${scoreB}`,
+                    diff: Rb - Ra
+                });
+            } else if (scoreB > scoreA && Ra > Rb) {
+                round.upsets.push({
+                    winner: pNamesB[0],
+                    wTeam: match.player_b_team,
+                    wRate: Rb,
+                    loser: pNamesA[0],
+                    lTeam: match.player_a_team,
+                    lRate: Ra,
+                    score: `${scoreB}:${scoreA}`,
+                    diff: Ra - Rb
+                });
             }
         }
 
@@ -1819,7 +1891,7 @@ function processData(currentRoundIdOverride = null) {
                     }
                 }
                 p.rating += deltaOwn;
-                if (isLatestRound) p.roundGain += deltaOwn;
+                round.gains.set(name, (round.gains.get(name) || 0) + deltaOwn);
 
                 const roundOrder = getRoundOrderFromStr(match.round);
                 const sOrder = getSeasonOrder(match.season);
@@ -1869,14 +1941,6 @@ function processData(currentRoundIdOverride = null) {
         updateSide(pNamesB, scoreB, scoreA, diffB, diffA, displayDeltaA, pNamesA, match.player_a_team, match.player_b_team, oppRatingBeforeB);
     });
 
-    // Only the latest-round value is needed for tables/highlights. Full history
-    // (binary search per player×round) is deferred via ensurePlayerEffectivenessHistory.
-    Object.values(players).forEach(p => {
-        p.latestRoundEffectiveness = calculateRatingPerformance(p.latestRoundEffectivenessEntries);
-        p.effectivenessHistory = {};
-        p._effectivenessHistoryReady = false;
-    });
-
     // `team` so far is "the team they last played a match for", which goes stale the
     // moment a player transfers. The season roster sheets know better - use them.
     if (seasonRostersAvailable()) {
@@ -1885,9 +1949,7 @@ function processData(currentRoundIdOverride = null) {
         });
     }
 
-    const result = {players, roundsSet, totalSets, latestRoundName, latestRoundId, upsetsList};
-    processDataCache.set(cacheKey, result);
-    return result;
+    return {players, roundsSet, totalSets, latestRoundName, latestRoundId, roundStats};
 }
 
 // ============================================================
@@ -4324,7 +4386,7 @@ function renderRatingLineChart(p, compareP, canvasId, chartRefSetter, attempt = 
 // --- RATING PAGE ---
 function renderRatingPage() {
     const {players} = processData();
-    // Achievements need many processData(roundId) passes — do not block first paint.
+    // Achievements cover every round of every season — computed lazily, not before first paint.
     let achievementsByPlayer = null;
     const ensureAchievementsByPlayer = () => {
         if (!achievementsByPlayer) achievementsByPlayer = getLeagueAchievementsByPlayer();
@@ -9686,7 +9748,7 @@ function initMobileNav() {
 }
 
 // Build the nav as soon as the DOM is ready. `load` would wait for every async asset
-// (e.g. MathJax and its fonts on the rating page), so the header showed up late.
+// (fonts, images, third-party scripts), so the header showed up late.
 document.addEventListener('DOMContentLoaded', renderNavigation);
 
 // Set current year in footer

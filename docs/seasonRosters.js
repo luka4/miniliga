@@ -21,7 +21,11 @@ const SeasonRosters = (() => {
   const SHEET_PREFIX = 'DB_';
   const QUERY = 'SELECT A, B';
   const CACHE_KEY = 'season_rosters_v1';
-  const CACHE_TTL_MS = 10 * 60 * 1000; // rosters change rarely; re-check every 10 minutes
+  // Rosters change rarely. A cached copy is used right away (no waiting on Google before
+  // the first render); once older than the TTL it is refreshed in the background for the
+  // next page load. Past the max age the page waits for fresh lists instead.
+  const CACHE_TTL_MS = 10 * 60 * 1000;
+  const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   // Values that mean "this row is a header, not a player".
   const HEADER_NAMES = new Set(['hráč', 'hrac', 'hráči', 'hraci', 'meno', 'player', 'name']);
@@ -61,13 +65,13 @@ const SeasonRosters = (() => {
 
   function readCache() {
     try {
-      const raw = sessionStorage.getItem(CACHE_KEY);
+      const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed.ts !== 'number') return null;
-      if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
+      if (Date.now() - parsed.ts > CACHE_MAX_AGE_MS) return null;
       if (!parsed.seasons || typeof parsed.seasons !== 'object') return null;
-      return parsed.seasons;
+      return parsed;
     } catch {
       return null;
     }
@@ -75,7 +79,7 @@ const SeasonRosters = (() => {
 
   function writeCache(seasons) {
     try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), seasons }));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), seasons }));
     } catch {
       // storage unavailable / full - caching is best effort only
     }
@@ -95,26 +99,39 @@ const SeasonRosters = (() => {
       .filter(([name, team]) => normalizeName(name) && normalizeName(team));
   }
 
+  async function fetchAll() {
+    const results = await Promise.all(ROSTER_SEASONS.map(fetchSeason));
+    const seasons = {};
+    ROSTER_SEASONS.forEach((season, order) => {
+      seasons[season] = results[order] || [];
+    });
+    return seasons;
+  }
+
+  // The current page keeps the lists it rendered with; the refreshed copy is for the next load.
+  function refreshCacheInBackground() {
+    fetchAll()
+      .then((seasons) => {
+        if (Object.values(seasons).some((pairs) => pairs.length > 0)) writeCache(seasons);
+      })
+      .catch(() => {});
+  }
+
   async function loadAll() {
     const cached = readCache();
-    if (cached) {
-      ROSTER_SEASONS.forEach((season, order) => {
-        if (Array.isArray(cached[season])) ingest(season, order, cached[season]);
-      });
+    // A season added to ROSTER_SEASONS since the cache was written forces a fresh fetch.
+    if (cached && ROSTER_SEASONS.every((season) => Array.isArray(cached.seasons[season]))) {
+      ROSTER_SEASONS.forEach((season, order) => ingest(season, order, cached.seasons[season]));
       if (bySeason.size > 0) {
+        if (Date.now() - cached.ts > CACHE_TTL_MS) refreshCacheInBackground();
         ready = true;
         return api;
       }
     }
 
-    const results = await Promise.all(ROSTER_SEASONS.map(fetchSeason));
-    const toCache = {};
-    ROSTER_SEASONS.forEach((season, order) => {
-      const pairs = results[order] || [];
-      toCache[season] = pairs;
-      ingest(season, order, pairs);
-    });
-    if (bySeason.size > 0) writeCache(toCache);
+    const seasons = await fetchAll();
+    ROSTER_SEASONS.forEach((season, order) => ingest(season, order, seasons[season]));
+    if (bySeason.size > 0) writeCache(seasons);
     ready = true;
     return api;
   }

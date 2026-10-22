@@ -22,8 +22,7 @@
     <meta name="twitter:description" content="Elo rating hráčov a tímov Košickej Miniligy v stolnom tenise.">
     <meta name="twitter:image" content="https://miniliga.sk/media/og-image.png?v=1">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles/loader.css">
     <link rel="preload" href="fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -208,7 +207,13 @@
                         <li><span class="math-var">R_old</span>: Váš aktuálny rating pred zápasom.</li>
                         <li><span class="math-var">K</span>: Váhový faktor (30 pre nováčikov, klesá na 10 pre stabilných hráčov).</li>
                         <li><span class="math-var">Sety_očakávané</span>: Vypočítané podľa vzorca: <br>
-                            \( E_a = \frac{PočetSetov}{1 + 10^{(R_b - R_a) / 300}} \)
+                            <math>
+                                <msub><mi>E</mi><mi>a</mi></msub><mo>=</mo>
+                                <mfrac>
+                                    <mi>PočetSetov</mi>
+                                    <mrow><mn>1</mn><mo>+</mo><msup><mn>10</mn><mrow><mo>(</mo><msub><mi>R</mi><mi>b</mi></msub><mo>−</mo><msub><mi>R</mi><mi>a</mi></msub><mo>)</mo><mo>/</mo><mn>300</mn></mrow></msup></mrow>
+                                </mfrac>
+                            </math>
                         </li>
                         <li>(Deliteľ 300 určuje citlivosť systému na rozdiely v ratingu).</li>
                     </ul>
@@ -253,9 +258,9 @@
 </div>
 
 <script src="googleSheetsLoader.js?v=3"></script>
-<script src="seasonRosters.js?v=1"></script>
+<script src="seasonRosters.js?v=2"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=1004"></script>
+<script src="script.js?v=1005"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>
