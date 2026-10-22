@@ -45,6 +45,10 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) { canvas.remove(); return; }
 
+        // Calm the footage: half speed so the letters read as a name, not as flicker
+        video.playbackRate = 0.5;
+        video.addEventListener('loadedmetadata', () => { video.playbackRate = 0.5; });
+
         let glyphs = [];
         let w = 0, h = 0, dpr = 1, size = 0;
 
@@ -80,7 +84,7 @@
             glyphs.forEach(g => ctx.fillText(g.text, g.x, g.y));
             // Video only where letters are; a fog of white stays so dark footage never swallows a letter
             ctx.globalCompositeOperation = 'source-atop';
-            ctx.globalAlpha = 0.34;
+            ctx.globalAlpha = 0.26;
             const vw = video.videoWidth, vh = video.videoHeight;
             const scale = Math.max(w / vw, h / vh);
             const sw = w / scale, sh = h / scale;
