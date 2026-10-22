@@ -88,9 +88,9 @@
                     { translate: `${cx + dist}px 0` }
                 ], { duration: total, fill: 'forwards' });
                 ballY = ball.animate([
-                    { transform: `translateY(${hitY - rise}px) scale(1, 1)`, easing: 'cubic-bezier(0.55, 0, 1, 0.6)' },
-                    { transform: `translateY(${hitY}px) scale(1.25, 0.75)`, offset: 0.62, easing: 'cubic-bezier(0, 0.4, 0.45, 1)' },
-                    { transform: `translateY(${hitY - rise}px) scale(1, 1)` }
+                    { transform: `translateY(${hitY - rise}px)`, easing: 'cubic-bezier(0.55, 0, 1, 0.6)' },
+                    { transform: `translateY(${hitY}px)`, offset: 0.62, easing: 'cubic-bezier(0, 0.4, 0.45, 1)' },
+                    { transform: `translateY(${hitY - rise}px)` }
                 ], { duration: total, fill: 'forwards' });
             } else {
                 // the last hit: the ball drives the A in, then arcs over to the free lane after the A,
@@ -102,18 +102,17 @@
                 const arc = 640;
                 const span = d + arc + times.reduce((a, b) => a + b, 0);
                 const up = 'cubic-bezier(0, 0.4, 0.45, 1)', down = 'cubic-bezier(0.55, 0, 1, 0.6)';
-                const squash = 'scale(1.3, 0.7)';
                 const frames = [
-                    { transform: `translateY(${hitY - rise}px) scale(1, 1)`, easing: down },
-                    { transform: `translateY(${hitY}px) scale(1.25, 0.75)`, offset: d / span, easing: up },
-                    { transform: `translateY(${hitY - rise * 1.6}px) scale(1, 1)`, offset: (d + arc * 0.3) / span, easing: down },
-                    { transform: `translateY(${rest.y}px) ${squash}`, offset: (d + arc) / span, easing: up }
+                    { transform: `translateY(${hitY - rise}px)`, easing: down },
+                    { transform: `translateY(${hitY}px)`, offset: d / span, easing: up },
+                    { transform: `translateY(${hitY - rise * 1.6}px)`, offset: (d + arc * 0.3) / span, easing: down },
+                    { transform: `translateY(${rest.y}px)`, offset: (d + arc) / span, easing: up }
                 ];
                 let at = d + arc;
                 heights.forEach((h, k) => {
-                    frames.push({ transform: `translateY(${rest.y - h}px) scale(1, 1)`, offset: (at + times[k] / 2) / span, easing: down });
+                    frames.push({ transform: `translateY(${rest.y - h}px)`, offset: (at + times[k] / 2) / span, easing: down });
                     at += times[k];
-                    frames.push({ transform: `translateY(${rest.y}px) ${squash}`, offset: Math.min(1, at / span), easing: up });
+                    frames.push({ transform: `translateY(${rest.y}px)`, offset: Math.min(1, at / span), easing: up });
                 });
                 ballX = ball.animate([
                     { translate: `${cx + dist}px 0`, easing: flight },
