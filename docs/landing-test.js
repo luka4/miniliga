@@ -34,7 +34,7 @@
     }
 
     // --- Intro: a ping-pong rally. The ball is hit in from the right for each letter, drives it into place,
-    // and rebounds; the rally speeds up and ends in a smash. Then KOŠICKA drops in above the word. ---
+    // and rebounds; the rally speeds up and ends in a smash. Then the whole word KOŠICKA drops in above it. ---
     const wait = anims => Promise.all(anims.map(a => a.finished.catch(() => {})));
 
     async function startIntro(h1, letters) {
@@ -99,14 +99,13 @@
         ball.classList.remove('is-live');
         h1.classList.remove('is-anim');
 
-        // KOŠICKA drops in letter by letter, in the accent colour
-        ks.forEach((k, i) => {
-            k.classList.add('is-in');
-            k.animate([
-                { transform: 'translateY(-70%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }
-            ], { duration: 360, delay: i * 55, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' });
-        });
-        setTimeout(() => mark.classList.remove('is-anim'), 360 + ks.length * 55);
+        // KOŠICKA drops in as one whole word, in the accent colour
+        const tag = mark.querySelector('.hero__kosicka');
+        ks.forEach(k => k.classList.add('is-in'));
+        tag.animate([
+            { transform: 'translateY(-70%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }
+        ], { duration: 360, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' });
+        setTimeout(() => mark.classList.remove('is-anim'), 360);
     }
 
     // --- Figures count up the first time they receive a value ---
