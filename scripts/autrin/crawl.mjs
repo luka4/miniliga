@@ -2,7 +2,7 @@
 // Scrapes autrin.sk (Miniliga) and FILLS GAPS in one season of docs/data/matches.json: a team match is only
 // written when matches.json has no real rows for it yet (missing, or only WO/WO placeholder rows).
 // Existing rows with real data are never modified; placeholders follow autrin's date/time/place.
-// Usage: node crawl.mjs [--out docs/data/matches.json] [--rocnik 4] [--season "JESEŇ 2026"]
+// Usage: node crawl.mjs [--out docs/data/matches.json] [--rocnik 4] [--season "JESEŇ 2026"] [--notify-out played.json]
 // Writes nothing (exit 1) when a safety check fails, so a failed run keeps the last good data.
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { parseRoundIds, parseRound, parseProtocol } from './parse.mjs';
@@ -10,7 +10,8 @@ import { loadRoster, makeResolver, location } from './names.mjs';
 
 const arg = (n, d) => { const i = process.argv.indexOf('--' + n); return i > 0 ? process.argv[i + 1] : d; };
 const OUT = arg('out', 'docs/data/matches.json');
-const ROCNIK = arg('rocnik', '4');
+const NOTIFY_OUT = arg('notify-out', ''); // optional: JSON list of newly played team matches, read by notify.mjs
+const ROCNIK =arg('rocnik', '4');
 const SEASON = arg('season', 'JESEŇ 2026');
 const SHEET_ID = '1lFPZ5yyC6Zt1_d8MxOriGBH4v9G07bXetwjCtWGcPUw'; // same spreadsheet as googleSheetsLoader.js
 const BASE = `http://www.autrin.sk/miniligake_app.php?sport_id=1&sutaz_id=1&rocnik_id=${ROCNIK}&druzstvo_id=0`;
@@ -45,6 +46,7 @@ async function main() {
   for (const r of old) existing.set(mkey(r), existing.get(mkey(r)) || r.player_a !== 'WO' || r.player_b !== 'WO');
   const fills = new Map(); // match key -> rows replacing the placeholder / filling the gap
   const filled = [];
+  const played = []; // team matches that got real results in this run (for notifications)
   const teamsSeen = new Set();
   for (const [i, id] of roundIds.entries()) {
     const round = `${i + 1} kolo`;
@@ -75,6 +77,7 @@ async function main() {
       }
       fills.set(key, rows);
       filled.push(`${round} ${tm.home} - ${tm.away}`);
+      played.push({ round, home: ta, away: tb, score_a: tm.score[0], score_b: tm.score[1] });
       if (wa !== tm.score[0] || wb !== tm.score[1]) {
         throw new Error(`Round ${i + 1} ${tm.home}-${tm.away}: protocol wins ${wa}:${wb} != team score ${tm.score.join(':')}`);
       }
@@ -97,6 +100,7 @@ async function main() {
   }
   const all2 = [...rest, ...merged];
   writeFileSync(OUT, dump(all2));
+  if (NOTIFY_OUT) writeFileSync(NOTIFY_OUT, JSON.stringify(played));
   const summary = [`${SEASON}: ${old.length} -> ${merged.length} rows`, ...filled.map((f) => `  filled: ${f}`)];
   if (res.fresh.size) {
     summary.push('NEW names (not in roster/matches.json; add overrides to scripts/autrin/name-map.json if wrong):',

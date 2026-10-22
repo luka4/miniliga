@@ -4,6 +4,7 @@
 # (player names come from the DB_<SEASON> roster tab, falling back to names already in matches.json).
 # The crawler writes nothing when a safety check fails, so a failed run keeps the last good data.
 # Trigger: manual only (Actions -> "Autrin data" -> Run workflow).
+# New real results also trigger a OneSignal push (scripts/autrin/notify.mjs; secrets ONESIGNAL_APP_ID, ONESIGNAL_API_KEY).
 
 name: Autrin data
 on:
@@ -31,9 +32,10 @@ jobs:
           node-version: 24.x
 
       - name: Scrape
-        run: node scripts/autrin/crawl.mjs --out docs/data/matches.json
+        run: node scripts/autrin/crawl.mjs --out docs/data/matches.json --notify-out "$RUNNER_TEMP/played.json"
 
       - name: Commit and push
+        id: push
         run: |
           set -euo pipefail
           if git diff --quiet -- docs/data/matches.json; then
@@ -57,3 +59,13 @@ jobs:
           git commit -m "Autrin data $(date -u +%F)"
           git pull --rebase origin main
           git push origin HEAD:main
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # Push notification (OneSignal) for team matches that just got real results; only after the data is live.
+      # Needs repository secrets ONESIGNAL_APP_ID and ONESIGNAL_API_KEY.
+      - name: Notify subscribers
+        if: steps.push.outputs.pushed == 'true'
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+        run: node scripts/autrin/notify.mjs "$RUNNER_TEMP/played.json"
