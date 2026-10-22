@@ -1956,3 +1956,13 @@ a {
 .season-team-name {
   font-weight: 700;
 }
+
+/* Player picked in "Moje štatistiky" */
+.is-me {
+  background: var(--color-accent-3);
+  color: var(--color-pill-text);
+  padding: 0 0.3em;
+  border-radius: var(--radius-sm);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}

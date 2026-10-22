@@ -118,6 +118,18 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// Highlight the player chosen in "Moje štatistiky" wherever their name is listed.
+function isMyPlayerName(name) {
+    let saved = null;
+    try { saved = localStorage.getItem(MYSTATS_STORAGE_KEY); } catch (e) { return false; }
+    return !!saved && !!name && String(name).trim().toLowerCase() === saved.trim().toLowerCase();
+}
+
+function highlightMyName(name) {
+    const safe = escapeHtml(name);
+    return isMyPlayerName(name) ? `<span class="is-me">${safe}</span>` : safe;
+}
+
 function escapeAttr(str) {
     // Same escaping works for attributes.
     return escapeHtml(str);
@@ -2383,7 +2395,7 @@ function renderLatestRoundEffectivenessList(players, container, options = {}) {
     topPlayers.forEach((p, index) => {
         const li = document.createElement('li');
         li.className = 'top-player-row';
-        li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${escapeHtml(p.name)} <span class="tp-team">(${escapeHtml(p.team || 'N/A')})</span></div><div class="tp-gain tp-effectiveness">${p.latestRoundEffectiveness.toFixed(1)}</div>`;
+        li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${highlightMyName(p.name)} <span class="tp-team">(${escapeHtml(p.team || 'N/A')})</span></div><div class="tp-gain tp-effectiveness">${p.latestRoundEffectiveness.toFixed(1)}</div>`;
         target.appendChild(li);
     });
 }
@@ -2439,6 +2451,12 @@ function initFlipCards(root = document) {
 // --- HOME HERO: live league pulse (round, rating leader, best performance, most effective player) ---
 function renderHomeHero({ players, currentRoundId, playedMatches, upcomingMatches }) {
     const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    const setName = (id, name) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = name || '–';
+        el.classList.toggle('is-me', isMyPlayerName(name));
+    };
     const roundMatches = currentRoundId ? matchResults.filter(m => getMatchRoundId(m) === currentRoundId) : [];
     const sample = roundMatches[0] || null;
 
@@ -2450,17 +2468,17 @@ function renderHomeHero({ players, currentRoundId, playedMatches, upcomingMatche
     const list = Object.values(players);
     const pool = list.filter(p => p.matches > 0 && (!season || p.lastPlayedSeason === season));
     const leader = (pool.length ? pool : list.filter(p => p.matches > 0)).sort((a, b) => b.rating - a.rating)[0];
-    setText('heroLeaderName', leader ? leader.name : '–');
+    setName('heroLeaderName', leader && leader.name);
     setText('heroLeaderMeta', leader ? `${Math.round(leader.rating)} rating · ${leader.team}` : '');
 
     // Best performance of the round
     const best = list.filter(p => p.roundGain > 0).sort((a, b) => b.roundGain - a.roundGain)[0];
-    setText('heroGainName', best ? best.name : '–');
+    setName('heroGainName', best && best.name);
     setText('heroGainMeta', best ? `+${best.roundGain.toFixed(1)} rating · ${best.team}` : 'V tomto kole zatiaľ nikto');
 
     // Most effective player of the round
     const eff = list.filter(p => Number.isFinite(p.latestRoundEffectiveness)).sort((a, b) => b.latestRoundEffectiveness - a.latestRoundEffectiveness)[0];
-    setText('heroEffName', eff ? eff.name : '–');
+    setName('heroEffName', eff && eff.name);
     setText('heroEffMeta', eff ? `${eff.latestRoundEffectiveness.toFixed(1)} efektivita · ${eff.team}` : 'V tomto kole zatiaľ nikto');
 }
 
@@ -2565,7 +2583,7 @@ function renderHomePage() {
         if (p.roundGain <= 0) return;
         const li = document.createElement('li');
         li.className = 'top-player-row';
-        li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${p.name} <span class="tp-team">(${p.team})</span></div><div class="tp-gain">+${p.roundGain.toFixed(1)}</div>`;
+        li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${highlightMyName(p.name)} <span class="tp-team">(${p.team})</span></div><div class="tp-gain">+${p.roundGain.toFixed(1)}</div>`;
         gainList.appendChild(li);
     });
     renderLatestRoundEffectivenessList(players, 'topEffectivenessList', {
@@ -2579,9 +2597,9 @@ function renderHomePage() {
         let html = '';
         upsetsList.slice(0, 5).forEach(u => {
             html += `<div class="upset-card"><div class="upset-label">(Rating rozdiel ${Math.round(u.diff)})</div>
-                <div class="upset-match"><div class="upset-player">${u.winner}<div class="upset-team">${u.wTeam}</div><span class="upset-rating">${u.wRate.toFixed(0)}</span></div>
+                <div class="upset-match"><div class="upset-player">${highlightMyName(u.winner)}<div class="upset-team">${u.wTeam}</div><span class="upset-rating">${u.wRate.toFixed(0)}</span></div>
                 <div class="upset-score">${u.score}</div>
-                <div class="upset-player">${u.loser}<div class="upset-team">${u.lTeam}</div><span class="upset-rating">${u.lRate.toFixed(0)}</span></div></div></div>`;
+                <div class="upset-player">${highlightMyName(u.loser)}<div class="upset-team">${u.lTeam}</div><span class="upset-rating">${u.lRate.toFixed(0)}</span></div></div></div>`;
         });
         upsetDiv.innerHTML = html;
     } else {
@@ -2847,9 +2865,9 @@ function renderHighlightsPage() {
                 const m = item.match;
                 html += `<div class="upset-card top-match-card">
                     <div class="upset-label">#${idx + 1} dvojhra kola</div>
-                    <div class="upset-match"><div class="upset-player">${m.player_a}<div class="upset-team">${m.player_a_team || 'N/A'}</div><div class="highlights-player-rating">Rating: ${item.ratingA.toFixed(1)}</div></div>
+                    <div class="upset-match"><div class="upset-player">${highlightMyName(m.player_a)}<div class="upset-team">${m.player_a_team || 'N/A'}</div><div class="highlights-player-rating">Rating: ${item.ratingA.toFixed(1)}</div></div>
                     <div class="upset-score">${m.score_a}:${m.score_b}</div>
-                    <div class="upset-player">${m.player_b}<div class="upset-team">${m.player_b_team || 'N/A'}</div><div class="highlights-player-rating">Rating: ${item.ratingB.toFixed(1)}</div></div></div>
+                    <div class="upset-player">${highlightMyName(m.player_b)}<div class="upset-team">${m.player_b_team || 'N/A'}</div><div class="highlights-player-rating">Rating: ${item.ratingB.toFixed(1)}</div></div></div>
                     <div class="highlights-submeta">Priemerný rating pred zápasom: ${item.avgRating.toFixed(1)}</div>
                 </div>`;
             });
@@ -2874,7 +2892,7 @@ function renderHighlightsPage() {
             topPerformers.forEach((p, index) => {
                 const li = document.createElement('li');
                 li.className = 'top-player-row';
-                li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${p.name} <span class="tp-team">(${p.team})</span></div><div class="tp-gain">+${p.roundGain.toFixed(1)}</div>`;
+                li.innerHTML = `<div class="tp-rank">${index + 1}</div><div class="tp-name">${highlightMyName(p.name)} <span class="tp-team">(${p.team})</span></div><div class="tp-gain">+${p.roundGain.toFixed(1)}</div>`;
                 gainList.appendChild(li);
             });
             const tp = topPerformers[0];
@@ -2890,9 +2908,9 @@ function renderHighlightsPage() {
             let html = '';
             sortedUpsets.slice(0, 5).forEach(u => {
                 html += `<div class="upset-card"><div class="upset-label">(Rating rozdiel ${Math.round(u.diff)})</div>
-                    <div class="upset-match"><div class="upset-player">${u.winner}<div class="upset-team">${u.wTeam}</div><span class="upset-rating">${u.wRate.toFixed(0)}</span></div>
+                    <div class="upset-match"><div class="upset-player">${highlightMyName(u.winner)}<div class="upset-team">${u.wTeam}</div><span class="upset-rating">${u.wRate.toFixed(0)}</span></div>
                     <div class="upset-score">${u.score}</div>
-                    <div class="upset-player">${u.loser}<div class="upset-team">${u.lTeam}</div><span class="upset-rating">${u.lRate.toFixed(0)}</span></div></div></div>`;
+                    <div class="upset-player">${highlightMyName(u.loser)}<div class="upset-team">${u.lTeam}</div><span class="upset-rating">${u.lRate.toFixed(0)}</span></div></div></div>`;
             });
             upsetDiv.innerHTML = html;
             const tu = sortedUpsets[0];
