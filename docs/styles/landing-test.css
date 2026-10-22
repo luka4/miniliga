@@ -1,0 +1,36 @@
+/* test.html only: single-line wordmark with the ball-rally intro and the KOŠICKA tag above it */
+
+/* The ball arcs above the word, so only the sides are clipped */
+.hero__mark { overflow-x: clip; overflow-y: visible; position: relative; }
+.hero__mark .hero__name { overflow-x: clip; overflow-y: visible; }
+
+.hero__letter { transform-origin: 50% 100%; }
+
+/* KOŠICKA: a quarter of the wordmark's size, in the accent colour, flush with the M */
+.hero__kosicka {
+  display: block;
+  margin: 0 0 calc(var(--wm, 100px) * 0.01) -0.033em;
+  font-family: var(--font-display);
+  font-size: calc(var(--wm, 100px) * 0.25);
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-accent-2);
+}
+.hero__k { display: inline-block; }
+.hero__mark.is-anim .hero__k:not(.is-in) { opacity: 0; }
+
+.hero__ball {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-accent-2);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, translate;
+}
+.hero__ball.is-live { opacity: 1; }
