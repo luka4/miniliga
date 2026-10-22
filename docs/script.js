@@ -464,7 +464,7 @@ const matchDetailsIndexCache = new WeakMap();
 function getMatchDetailsIndex(matchDetails) {
     let index = matchDetailsIndexCache.get(matchDetails);
     if (!index) {
-        index = {byRound: new Map(), firstRoundOrderBySeason: new Map()};
+        index = {byRound: new Map(), firstRoundOrderBySeason: new Map(), orders: []};
         matchDetails.forEach(md => {
             const roundId = getMatchRoundId(md);
             if (!index.byRound.has(roundId)) index.byRound.set(roundId, []);
@@ -473,6 +473,7 @@ function getMatchDetailsIndex(matchDetails) {
             const roundOrder = getRoundOrderFromStr(md.round);
             const first = index.firstRoundOrderBySeason.get(season);
             if (first === undefined || roundOrder < first) index.firstRoundOrderBySeason.set(season, roundOrder);
+            index.orders.push({seasonOrder: getSeasonOrder(md.season), roundOrder});
         });
         matchDetailsIndexCache.set(matchDetails, index);
     }
@@ -1273,12 +1274,9 @@ function getPlayerRatingBeforeMatch(playerName, matchRound, matchSeason, players
 
     const roundOrder = getRoundOrderFromStr(matchRound);
     const seasonOrder = getSeasonOrder(matchSeason);
-    const targetRoundId = `${matchSeason || 'N/A'}__${matchRound || ''}`;
 
     // Find matches in this round
-    const matchesInRound = player.matchDetails.filter(md => {
-        return `${md.season || 'N/A'}__${md.round || ''}` === targetRoundId;
-    });
+    const matchesInRound = getMatchDetailsIndex(player.matchDetails).byRound.get(getMatchRoundId({season: matchSeason, round: matchRound})) || [];
 
     if (matchesInRound.length > 0) {
         // Get the first match (rating before the first game in this round)
@@ -1289,21 +1287,33 @@ function getPlayerRatingBeforeMatch(playerName, matchRound, matchSeason, players
     }
 
     // If not found in matchDetails, try to use history
-    const historyKeys = Object.keys(player.history || {}).sort();
-    for (let i = historyKeys.length - 1; i >= 0; i--) {
-        const key = historyKeys[i];
-        const keyParts = key.split('|');
-        if (keyParts.length < 1) continue;
-        const keyPrefix = keyParts[0];
-        const keySeasonOrder = parseInt(keyPrefix.split('-')[0]) || 0;
-        const keyRoundOrder = parseInt(keyPrefix.split('-')[1]) || 0;
-        
-        if (keySeasonOrder < seasonOrder || (keySeasonOrder === seasonOrder && keyRoundOrder < roundOrder)) {
-            return player.history[key];
+    const history = getSortedHistory(player.history || {});
+    for (let i = history.length - 1; i >= 0; i--) {
+        const entry = history[i];
+        if (entry.seasonOrder < seasonOrder || (entry.seasonOrder === seasonOrder && entry.roundOrder < roundOrder)) {
+            return entry.rating;
         }
     }
 
     return INITIAL_RATING;
+}
+
+// `history` entries in key order with the ordering prefix ("20252-0700|...") parsed.
+const sortedHistoryCache = new WeakMap();
+function getSortedHistory(history) {
+    let sorted = sortedHistoryCache.get(history);
+    if (!sorted) {
+        sorted = Object.keys(history).sort().map(key => {
+            const keyPrefix = key.split('|')[0];
+            return {
+                seasonOrder: parseInt(keyPrefix.split('-')[0]) || 0,
+                roundOrder: parseInt(keyPrefix.split('-')[1]) || 0,
+                rating: history[key]
+            };
+        });
+        sortedHistoryCache.set(history, sorted);
+    }
+    return sorted;
 }
 
 // Get number of matches played before a specific match
@@ -1315,11 +1325,11 @@ function getPlayerMatchesBeforeMatch(playerName, matchRound, matchSeason, player
     const roundOrder = getRoundOrderFromStr(matchRound);
     const seasonOrder = getSeasonOrder(matchSeason);
 
-    return player.matchDetails.filter(md => {
-        const mdSeasonOrder = getSeasonOrder(md.season);
-        const mdRoundOrder = getRoundOrderFromStr(md.round);
-        return mdSeasonOrder < seasonOrder || (mdSeasonOrder === seasonOrder && mdRoundOrder < roundOrder);
-    }).length;
+    let count = 0;
+    getMatchDetailsIndex(player.matchDetails).orders.forEach(o => {
+        if (o.seasonOrder < seasonOrder || (o.seasonOrder === seasonOrder && o.roundOrder < roundOrder)) count++;
+    });
+    return count;
 }
 
 // Blend score toward neutral 50 for low sample counts
@@ -3396,7 +3406,7 @@ function buildGameNamesHtml(g, sA, sB, playersData) {
             const nameHtml = `<span class="game-player-name">${escapeHtml(name)}</span>`;
             if (isWalkoverToken(name)) return `<div class="game-player">${nameHtml}</div>`;
             const md = playersData && playersData[name] && Array.isArray(playersData[name].matchDetails)
-                ? playersData[name].matchDetails.find(m =>
+                ? (getMatchDetailsIndex(playersData[name].matchDetails).byRound.get(getMatchRoundId(g)) || []).find(m =>
                     m.round === g.round && (m.season || null) === (g.season || null) &&
                     m.opponent === oppDisplay && m.score_own === scoreOwn && m.score_opp === scoreOpp &&
                     !!m.isDoubles === isDoubles)
@@ -3730,98 +3740,101 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 return;
             }
 
-            // --- STATS GENERATION START ---
-            const stats = {};
-            match.games.forEach(g => {
-                if (!isPlayedMatch(g)) return;
-                const isD = g.doubles === true || g.doubles === "true";
-                const pVal = isD ? 0.5 : 1;
-                const sA = parseInt(g.score_a);
-                const sB = parseInt(g.score_b);
+            // Prediction, player stats and the per-game list are only shown in the expanded panel,
+            // so they are built on first expand (see renderMatchDetails).
+            const buildDetailsContent = () => {
+                // --- STATS GENERATION START ---
+                const stats = {};
+                match.games.forEach(g => {
+                    if (!isPlayedMatch(g)) return;
+                    const isD = g.doubles === true || g.doubles === "true";
+                    const pVal = isD ? 0.5 : 1;
+                    const sA = parseInt(g.score_a);
+                    const sB = parseInt(g.score_b);
 
-                const updateP = (namesStr, team, won) => {
-                    if (!namesStr) return;
-                    namesStr.split('/').map(n => n.trim()).forEach(n => {
-                        if (!n || isWalkoverToken(n)) return;
-                        if (!stats[n]) stats[n] = { name: n, team: team, points: 0, possible: 0 };
-                        stats[n].possible += pVal;
-                        if (won) stats[n].points += pVal;
-                    });
-                };
-                updateP(g.player_a, match.teamA, sA > sB);
-                updateP(g.player_b, match.teamB, sB > sA);
-            });
+                    const updateP = (namesStr, team, won) => {
+                        if (!namesStr) return;
+                        namesStr.split('/').map(n => n.trim()).forEach(n => {
+                            if (!n || isWalkoverToken(n)) return;
+                            if (!stats[n]) stats[n] = { name: n, team: team, points: 0, possible: 0 };
+                            stats[n].possible += pVal;
+                            if (won) stats[n].points += pVal;
+                        });
+                    };
+                    updateP(g.player_a, match.teamA, sA > sB);
+                    updateP(g.player_b, match.teamB, sB > sA);
+                });
 
-            // Calculate ratings and prediction if players data is available
-            let predictionHtml = '';
-            let ratingsA = null;
-            let ratingsB = null;
+                // Calculate ratings and prediction if players data is available
+                let predictionHtml = '';
+                let ratingsA = null;
+                let ratingsB = null;
             
-            if (playersData && teamMapData) {
-                ratingsA = calculateTeamRatingsForMatch(match.teamA, match);
-                ratingsB = calculateTeamRatingsForMatch(match.teamB, match);
+                if (playersData && teamMapData) {
+                    ratingsA = calculateTeamRatingsForMatch(match.teamA, match);
+                    ratingsB = calculateTeamRatingsForMatch(match.teamB, match);
                 
-                // Using global winProb function
-                const totalSets = 18;
-                let predScoreA = Math.round(totalSets * winProb(ratingsA.actualRating, ratingsB.actualRating));
-                let predScoreB = Math.max(0, totalSets - predScoreA);
+                    // Using global winProb function
+                    const totalSets = 18;
+                    let predScoreA = Math.round(totalSets * winProb(ratingsA.actualRating, ratingsB.actualRating));
+                    let predScoreB = Math.max(0, totalSets - predScoreA);
                 
-                predScoreA = Math.min(totalSets, Math.max(0, predScoreA));
-                predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
+                    predScoreA = Math.min(totalSets, Math.max(0, predScoreA));
+                    predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
                 
-                predictionHtml = `<div class="match-prediction-section">
+                    predictionHtml = `<div class="match-prediction-section">
                     <div class="prediction-label" title="Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase)">Predikcia</div>
                     <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
                 </div>${buildRatingsCollapseHtml(match.teamA, match.teamB, ratingsA, ratingsB, true)}`;
-            }
+                }
 
-            const getTeamStatsHtml = (teamName, align, teamRatings = null) => {
-                const list = Object.values(stats).filter(p => p.team === teamName).sort((a, b) => {
-                    if (b.points !== a.points) {
-                        return b.points - a.points;
-                    }
-                    return a.possible - b.possible;
-                });
-                if (list.length === 0) return '';
-                const tLogo = getTeamLogoSrc(teamName);
-                let h = `<div class="team-stats ${align}">`;
-                if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
+                const getTeamStatsHtml = (teamName, align, teamRatings = null) => {
+                    const list = Object.values(stats).filter(p => p.team === teamName).sort((a, b) => {
+                        if (b.points !== a.points) {
+                            return b.points - a.points;
+                        }
+                        return a.possible - b.possible;
+                    });
+                    if (list.length === 0) return '';
+                    const tLogo = getTeamLogoSrc(teamName);
+                    let h = `<div class="team-stats ${align}">`;
+                    if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
                 
-                const isMobile = isMobileViewport();
-                list.forEach((p, index) => {
-                    h += `<div class="player-stat-row">
+                    const isMobile = isMobileViewport();
+                    list.forEach((p, index) => {
+                        h += `<div class="player-stat-row">
                         <div class="player-stat-name">${escapeHtml(isMobile ? formatPlayerName(p.name) : p.name)}</div>
                         <span class="player-stat-score">${p.points}/${p.possible}</span>
                     </div>`;
-                });
-                h += `</div>`;
-                return h;
-            };
+                    });
+                    h += `</div>`;
+                    return h;
+                };
 
-            const scoreBadgeHtml = `<div class="score-badge score-badge--overlay ${scoreBadgeClass}">${match.scoreA}-${match.scoreB}</div>`;
-            const statsHtml = `<div class="match-stats-container">${getTeamStatsHtml(match.teamA, 'left', ratingsA)}${scoreBadgeHtml}${getTeamStatsHtml(match.teamB, 'right', ratingsB)}</div>`;
-            // --- STATS GENERATION END ---
+                const scoreBadgeHtml = `<div class="score-badge score-badge--overlay ${scoreBadgeClass}">${match.scoreA}-${match.scoreB}</div>`;
+                const statsHtml = `<div class="match-stats-container">${getTeamStatsHtml(match.teamA, 'left', ratingsA)}${scoreBadgeHtml}${getTeamStatsHtml(match.teamB, 'right', ratingsB)}</div>`;
+                // --- STATS GENERATION END ---
 
-            // Group games: doubles first, then singles
-            const playedGames = match.games.filter(isPlayedMatch).sort((a, b) => (b.doubles ? 1 : 0) - (a.doubles ? 1 : 0));
-            const doublesGames = playedGames.filter(g => g.doubles === true || g.doubles === "true");
-            const singlesGames = playedGames.filter(g => !(g.doubles === true || g.doubles === "true"));
+                // Group games: doubles first, then singles
+                const playedGames = match.games.filter(isPlayedMatch).sort((a, b) => (b.doubles ? 1 : 0) - (a.doubles ? 1 : 0));
+                const doublesGames = playedGames.filter(g => g.doubles === true || g.doubles === "true");
+                const singlesGames = playedGames.filter(g => !(g.doubles === true || g.doubles === "true"));
             
-            let gamesHtml = '';
-            let teamScoreA = 0;
-            let teamScoreB = 0;
-            let gameNumber = 0;
+                let gamesHtml = '';
+                let teamScoreA = 0;
+                let teamScoreB = 0;
+                let gameNumber = 0;
             
-            // First 2 doubles matches
-            if (doublesGames.length > 0) {
-                gamesHtml += '<div class="game-group">';
-                doublesGames.slice(0, 2).forEach(g => {
-                    gameNumber++;
-                    const sA = parseInt(g.score_a);
-                    const sB = parseInt(g.score_b);
-                    if (sA > sB) teamScoreA++;
-                    else if (sB > sA) teamScoreB++;
-                    gamesHtml += `<div class="game-row">
+                // First 2 doubles matches
+                if (doublesGames.length > 0) {
+                    gamesHtml += '<div class="game-group">';
+                    doublesGames.slice(0, 2).forEach(g => {
+                        gameNumber++;
+                        const sA = parseInt(g.score_a);
+                        const sB = parseInt(g.score_b);
+                        if (sA > sB) teamScoreA++;
+                        else if (sB > sA) teamScoreB++;
+                        gamesHtml += `<div class="game-row">
                         <span class="team-score team-score-left">${teamScoreA}</span>
                         <div class="game-row-content">
                             ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
@@ -3829,22 +3842,22 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                         </div>
                         <span class="team-score team-score-right">${teamScoreB}</span>
                     </div>`;
-                });
-                gamesHtml += '</div>';
-            }
+                    });
+                    gamesHtml += '</div>';
+                }
             
-            // Singles matches in groups of 4
-            for (let i = 0; i < singlesGames.length; i += 4) {
-                const batch = singlesGames.slice(i, i + 4);
-                if (batch.length > 0) {
-                    gamesHtml += '<div class="game-group">';
-                    batch.forEach(g => {
-                        gameNumber++;
-                        const sA = parseInt(g.score_a);
-                        const sB = parseInt(g.score_b);
-                        if (sA > sB) teamScoreA++;
-                        else if (sB > sA) teamScoreB++;
-                        gamesHtml += `<div class="game-row">
+                // Singles matches in groups of 4
+                for (let i = 0; i < singlesGames.length; i += 4) {
+                    const batch = singlesGames.slice(i, i + 4);
+                    if (batch.length > 0) {
+                        gamesHtml += '<div class="game-group">';
+                        batch.forEach(g => {
+                            gameNumber++;
+                            const sA = parseInt(g.score_a);
+                            const sB = parseInt(g.score_b);
+                            if (sA > sB) teamScoreA++;
+                            else if (sB > sA) teamScoreB++;
+                            gamesHtml += `<div class="game-row">
                             <span class="team-score team-score-left">${teamScoreA}</span>
                             <div class="game-row-content">
                                 ${(g.doubles === true || g.doubles === "true") ? '<div class="doubles-badge">ŠTVORHRA</div>' : ''}
@@ -3852,10 +3865,12 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                             </div>
                             <span class="team-score team-score-right">${teamScoreB}</span>
                         </div>`;
-                    });
-                    gamesHtml += '</div>';
+                        });
+                        gamesHtml += '</div>';
+                    }
                 }
-            }
+                return {predictionHtml, statsHtml, gamesHtml};
+            };
             
             // Default mode is compact
             let currentViewMode = 'compact';
@@ -3991,7 +4006,10 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 }, true);
             };
             
+            let detailsContent = null;
             const renderMatchDetails = () => {
+                if (!detailsContent) detailsContent = buildDetailsContent();
+                const {predictionHtml, statsHtml, gamesHtml} = detailsContent;
                 const predictionStatsGroup = `<div class="match-prediction-stats-group">${predictionHtml}${statsHtml}</div>`;
                 
                 if (currentViewMode === 'compact') {
@@ -4035,10 +4053,10 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 renderMatchDetails();
             };
             
-            // Initial render
-            renderMatchDetails();
-
+            // Built on first expand: results.html lists every fixture of every season and
+            // most panels are never opened.
             summary.onclick = () => {
+                if (!detailsContent) renderMatchDetails();
                 const isEx = details.style.display === 'block';
                 details.style.display = isEx ? 'none' : 'block';
                 matchRow.classList.toggle('active', !isEx);
