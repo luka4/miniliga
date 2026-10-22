@@ -9,7 +9,11 @@
 /* KOŠICKA: a quarter of the wordmark's size, in the accent colour, flush with the M */
 .hero__kosicka {
   display: block;
-  margin: 0 0 calc(var(--wm, 100px) * 0.01) -0.033em;
+  /* tucked into the top of MINILIGA by a few pixels */
+  margin: 0 0 calc(var(--wm, 100px) * -0.1) -0.033em;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
   font-family: var(--font-display);
   font-size: calc(var(--wm, 100px) * 0.25);
   line-height: 1.2;
@@ -17,6 +21,9 @@
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--color-highlight);
+  /* a ground-coloured outline keeps the light blue readable where it crosses the white letters */
+  -webkit-text-stroke: 0.14em var(--ink);
+  paint-order: stroke fill;
 }
 .hero__k { display: inline-block; }
 .hero__mark.is-anim .hero__k:not(.is-in) { opacity: 0; }
@@ -31,6 +38,7 @@
   background: #fff;
   opacity: 0;
   pointer-events: none;
+  transform-origin: 50% 100%;
   will-change: transform, translate;
 }
 .hero__ball.is-live { opacity: 1; }
