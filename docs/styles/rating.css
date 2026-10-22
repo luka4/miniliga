@@ -1699,3 +1699,20 @@ tbody td:nth-child(2) {
   #page-rating td.rating-low, #page-rating td.rating-med, #page-rating td.rating-high, #page-rating td.rating-inactive { font-size: 17px; }
   #page-rating .container.page-container { padding: 16px; }
 }
+
+/* Desktop horizontal scrolling: viewport-bottom scrollbar + drag-to-scroll */
+#stickyHScroll {
+  position: fixed;
+  bottom: 0;
+  height: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  z-index: 4500;
+  display: none;
+  background: #fff;
+  border-top: 2px solid var(--ink);
+}
+#stickyHScroll > div { height: 1px; }
+#mainTableWrapper { cursor: grab; }
+#mainTableWrapper.is-dragging { cursor: grabbing; user-select: none; }
+@media screen and (max-width: 768px) { #stickyHScroll { display: none !important; } }
