@@ -4201,9 +4201,49 @@ function renderRatingLineChart(p, compareP, canvasId, chartRefSetter, attempt = 
         }
     }
     
+    const isNarrow = rect.width < 560;
+
+    // Vertical divider at the first round of each new season
+    const seasonOf = (l) => {
+        const m = String(l || '').match(/\(([^)]*)\)\s*$/);
+        return m ? m[1] : '';
+    };
+    const seasonStarts = [];
+    labels.forEach((l, i) => {
+        const s = seasonOf(l);
+        if (i > 0 && s && s !== seasonOf(labels[i - 1])) seasonStarts.push({ index: i, season: s });
+    });
+    const seasonDividerPlugin = {
+        id: 'seasonDividers',
+        beforeDatasetsDraw(chart) {
+            const { ctx: c, chartArea, scales } = chart;
+            if (!chartArea || !scales.x || seasonStarts.length === 0) return;
+            c.save();
+            c.strokeStyle = 'rgba(128,128,128,0.55)';
+            c.fillStyle = 'rgba(128,128,128,0.9)';
+            c.lineWidth = 1;
+            c.setLineDash([4, 4]);
+            c.font = '10px sans-serif';
+            c.textBaseline = 'bottom';
+            seasonStarts.forEach(({ index, season }) => {
+                const x = Math.round(scales.x.getPixelForValue(index)) + 0.5;
+                c.beginPath();
+                c.moveTo(x, chartArea.top);
+                c.lineTo(x, chartArea.bottom);
+                c.stroke();
+                c.setLineDash([]);
+                c.textAlign = x > chartArea.right - 60 ? 'right' : 'left';
+                c.fillText(season, x + (c.textAlign === 'left' ? 4 : -4), chartArea.bottom - 3);
+                c.setLineDash([4, 4]);
+            });
+            c.restore();
+        }
+    };
+
     // Create new chart with improved options
     const newChart = new Chart(ctx, {
         type: 'line',
+        plugins: [seasonDividerPlugin],
         data: {
             labels: labels,
             datasets: datasets
@@ -4221,7 +4261,31 @@ function renderRatingLineChart(p, compareP, canvasId, chartRefSetter, attempt = 
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { autoSkip: true, maxTicksLimit: 10 }
+                    ticks: isNarrow
+                        ? {
+                            autoSkip: true,
+                            maxTicksLimit: 6,
+                            maxRotation: 0,
+                            minRotation: 0,
+                            font: { size: 10 },
+                            // Full "N kolo (SEZÓNA YYYY)" labels force rotation and squash the plot:
+                            // show just the round number, plus a short season tag when the season changes.
+                            callback: function (value, index) {
+                                const parse = (l) => {
+                                    const m = String(l || '').match(/^(\d+)\D*?(?:\(([^)]*)\))?\s*$/);
+                                    return m ? { num: m[1], season: m[2] || '' } : null;
+                                };
+                                const cur = parse(labels[index]);
+                                if (!cur) return labels[index];
+                                const prev = index > 0 ? parse(labels[index - 1]) : null;
+                                if (cur.season && (!prev || prev.season !== cur.season)) {
+                                    const sm = cur.season.match(/^(\S{1,3})\S*\s+(?:\d{2})?(\d{2})$/);
+                                    return [cur.num, sm ? `${sm[1]} ${sm[2]}` : cur.season];
+                                }
+                                return cur.num;
+                            }
+                        }
+                        : { autoSkip: true, maxTicksLimit: 10 }
                 }
             }
         }
