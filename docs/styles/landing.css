@@ -124,6 +124,15 @@ html { scroll-behavior: smooth; }
   font-variant-numeric: tabular-nums;
 }
 
+/* min-width 0 / overflow hidden: the oversized single-line word must not stretch its flex/grid parent */
+.hero__mark {
+  min-width: 0;
+  margin: 0 0 8px;
+  overflow: hidden;
+}
+
+.hero__mark .hero__name { margin: 0; }
+
 /* The monument: set by landing.js to span the whole width */
 .hero__name {
   margin: 0 0 8px;
@@ -140,15 +149,13 @@ html { scroll-behavior: smooth; }
 
 .hero__name:not(.is-fitted) { visibility: hidden; }
 
-.fit-line {
-  display: inline-block;
-  padding-top: 0.04em;
-}
+.hero__letter { display: inline-block; padding-top: 0.04em; }
 
 /* Anton's side bearing would push the M in from the margin: pull it back */
-.fit-line:first-child { margin-left: -0.033em; }
+.hero__letter:first-child { margin-left: -0.033em; }
 
-/* The letters rise via the canvas (landing.js); the text underneath stays still so it can be measured */
+/* Until its turn in the intro (landing.js) a letter waits invisible off the right edge */
+.hero__name.is-anim .hero__letter:not(.is-in) { opacity: 0; }
 
 @keyframes rise {
   from { transform: translateY(105%); }
@@ -348,9 +355,6 @@ body:not(.loading) .pulse__tile:nth-child(4) { animation-delay: 0.39s; }
   .pulse__tile--count { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .pulse__tile--count dt { font-size: 13px; line-height: 1.15; }
   .pulse__tile--count dd { font-size: 28px; }
-  .hero__name { line-height: 0.8; }
-  .fit-line { display: block; }
-  .fit-line:last-child { margin-left: -0.033em; }
   #page-home .upset-card { grid-template-columns: 1fr; gap: 2px; }
   #page-home .upset-label { order: 0; }
   #page-home .upset-match { grid-template-columns: 1fr auto; gap: 4px 10px; }
