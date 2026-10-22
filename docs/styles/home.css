@@ -280,7 +280,7 @@
   margin: 14px auto 10px auto;
   max-width: 740px;
   text-align: center;
-  color: #111111;
+  color: var(--color-text);
   font-size: 1.12rem;
   font-weight: 700;
   line-height: 1.4;

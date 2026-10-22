@@ -3,8 +3,8 @@
 
 body.sport {
   --ink: var(--color-primary);
-  --ink-2: #1f2937;
-  --ink-3: #374151;
+  --ink-2: #405482;
+  --ink-3: #5a6c94;
   --ground: var(--color-bg);
   --sky: var(--color-highlight);
   --gutter: 24px;
@@ -617,3 +617,28 @@ body.sport .results-filter-btn--clear:hover { background: var(--ink-3); opacity:
   body.sport .results-filter-section input { max-width: none; flex-basis: 100%; }
   body.sport .results-filter-btn { flex: 1; }
 }
+
+/* ---------- Collapsed team ratings under "Predikcia" ---------- */
+.sport .match-ratings { margin: 6px 0 10px; }
+
+.sport .match-ratings > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-align: center;
+  user-select: none;
+}
+.sport .match-ratings > summary::-webkit-details-marker { display: none; }
+.sport .match-ratings > summary::after { content: " ▾"; }
+.sport .match-ratings[open] > summary::after { content: " ▴"; }
+
+.sport .match-ratings__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.sport .match-ratings__grid .team-rating-info { margin: 0; }
+.sport .rating-team-name { font-weight: 600; font-size: 14px; color: var(--ink); }

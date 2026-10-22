@@ -1460,8 +1460,10 @@ tbody td:nth-child(2) {
 
 /* Player modal: header */
 #page-rating #selectedPlayerHeader {
-  margin: 0 0 var(--gutter);
-  padding: 0 0 18px;
+  margin: 52px 0 var(--gutter);
+  padding: 20px;
+  background: var(--ink);
+  color: #fff;
   border: 0;
   text-align: left;
   display: grid;
@@ -1479,17 +1481,32 @@ tbody td:nth-child(2) {
   line-height: 0.92;
   letter-spacing: 0.01em;
   text-transform: uppercase;
-  color: var(--ink);
+  color: #fff;
 }
 
 #page-rating .player-header-team {
   grid-column: 1;
   font-size: 18px;
   font-weight: 600;
-  color: var(--ink-3);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-#page-rating .season-teams { grid-column: 1; font-size: 15px; color: var(--ink-3); }
+/* Season chips: same as the My Stats header */
+#page-rating .season-teams { grid-column: 1; justify-content: flex-start; margin-top: 6px; color: rgba(255, 255, 255, 0.85); font-weight: 600; }
+#page-rating .season-team { border-radius: 0; }
+
+/* Achievements: same card + title as My Stats */
+#page-rating #playerAchievementsSection {
+  background: #fff;
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--gutter);
+}
+/* Badges: square like on My Stats */
+#page-rating .achievement-badge-circle,
+#page-rating .achievement-badge-icon-img { border-radius: 0; box-shadow: none; }
+#page-rating #playerAchievementsSection .pie-row-title { margin: 0 0 14px; }
+#page-rating #playerAchievementsSection .achievements-grid--modal { margin: 0 auto; }
 
 #page-rating .player-header-logo { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
 #page-rating .player-header-logo img { max-width: 110px; filter: none; }

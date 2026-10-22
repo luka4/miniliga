@@ -3,7 +3,7 @@
 
 /* ---------- Page frame ---------- */
 body.sport-pages .container.page-container { padding-bottom: calc(var(--gutter) * 2); }
-body.sport-pages #mainContainer { max-width: none; }
+body.sport-pages #mainContainer { width: 96%; max-width: none; box-sizing: border-box; }
 body.sport-pages #page-mystats .container,
 body.sport-pages #mainContainer > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
 body.sport-pages #mainContainer > .stats-grid,
@@ -58,8 +58,8 @@ body.sport-pages :is(.lineup-card, .core-stat, .record-card, .derived-stat-item,
   color: var(--ink);
 }
 
-body.sport-pages :is(.core-stat--primary) { background: var(--ink); color: #fff; }
-body.sport-pages .core-stat--primary :is(.core-stat-value, .core-stat-label, .core-stat-rank) { color: #fff; }
+body.sport-pages :is(.core-stat--primary) { background: var(--sky); color: var(--ink); }
+body.sport-pages .core-stat--primary :is(.core-stat-value, .core-stat-label, .core-stat-rank, .core-stat-sub) { color: var(--ink); }
 body.sport-pages .core-stat-value,
 body.sport-pages .score-prediction,
 body.sport-pages .record-value,
@@ -178,6 +178,7 @@ body.sport-pages .history-section { padding: 0; }
 body.sport-pages .history-title { background: var(--ink); color: #fff; padding: 16px 16px 12px; margin: 0; }
 body.sport-pages .history-item { background: #f1f5f9; border: 0 !important; margin-top: 4px; }
 body.sport-pages .history-item:nth-child(even) { background: #fff; }
+body.sport-pages #myRecentMatches .score-row { background: transparent; }
 body.sport-pages .score-row:not(.score-row--max):not(.score-row--min) { font-family: var(--font-display); font-weight: 400; }
 
 /* ---------- Highlights ---------- */
@@ -194,7 +195,7 @@ body.sport-pages .stat-face::before,
 body.sport-pages .stat-face::after { display: none !important; }
 body.sport-pages :is(.stat-card--teams, .stat-card--matches, .stat-card--sets) .stat-face { color: var(--ink); }
 body.sport-pages .stat-face--back { background: #f1f5f9 !important; color: var(--ink); }
-body.sport-pages .highlights-card-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3vw, 38px); text-transform: uppercase; letter-spacing: 0.01em; }
+body.sport-pages .highlights-card-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 2.3vw, 32px); text-transform: uppercase; letter-spacing: 0.01em; }
 body.sport-pages .highlights-card-hint { font-weight: 600; opacity: 0.85; }
 body.sport-pages .highlights-bottom-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin: var(--gutter) auto; }
 
@@ -219,4 +220,40 @@ body.sport-pages .error-title { margin: 0 0 var(--gutter); font-family: var(--fo
   body.sport-pages .mystats-header { padding: 14px; }
   body.sport-pages .page-hero .highlights-filter-section { width: 100%; }
   body.sport-pages .page-hero select { flex: 1; min-width: 0; }
+}
+
+/* Prediction: keep the cards at the width they have before any result is shown */
+body.sport-pages #page-prediction #mainContainer > *,
+body#page-prediction.sport-pages #mainContainer > * { max-width: 820px; }
+
+/* Highlights: paired lists in two columns */
+body.sport-pages .highlights-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gutter);
+  align-items: start;
+}
+body.sport-pages .highlights-col { min-width: 0; }
+@media (max-width: 800px) {
+  body.sport-pages .highlights-duo { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* Highlights flip cards: calm palette (beats the page's own gradients in home.css) */
+body#page-highlights.sport-pages .stat-card--rounds,
+body#page-highlights.sport-pages .stat-card--teams,
+body#page-highlights.sport-pages .stat-card--matches,
+body#page-highlights.sport-pages .stat-card--sets { --card-b: var(--card-a); }
+body#page-highlights.sport-pages .stat-card--rounds  { --card-a: var(--ink); }
+body#page-highlights.sport-pages .stat-card--teams   { --card-a: var(--ink-2); }
+body#page-highlights.sport-pages .stat-card--matches { --card-a: var(--sky); }
+body#page-highlights.sport-pages .stat-card--sets    { --card-a: #dbe3ee; }
+body#page-highlights.sport-pages :is(.stat-card--rounds, .stat-card--teams) .stat-face--front { color: #fff; }
+body#page-highlights.sport-pages :is(.stat-card--matches, .stat-card--sets) .stat-face--front { color: var(--ink); }
+
+/* Highlights: both upset lists use the same card height */
+body#page-highlights.sport-pages .highlights-col .upset-card {
+  min-height: 176px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }

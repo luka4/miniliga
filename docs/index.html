@@ -15,8 +15,8 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600&display=swap">
-    <link rel="stylesheet" href="styles/shared.css">
-    <link rel="stylesheet" href="styles/sport.css?v=6">
+    <link rel="stylesheet" href="styles/shared.css?v=4">
+    <link rel="stylesheet" href="styles/sport.css?v=102">
     <link rel="stylesheet" href="styles/landing.css?v=17">
     <noscript><style>.hero__name{visibility:visible!important}</style></noscript>
     <link rel="canonical" href="https://miniliga.sk/" />
@@ -51,10 +51,10 @@
         </div>
 
         <div class="pulse" id="pulse">
-            <div class="pulse__tile pulse__tile--round">
+            <a class="pulse__tile pulse__tile--round" href="#latestRoundSection">
                 <strong class="pulse__value" id="heroRound">–</strong>
                 <div class="pulse__foot"><span class="pulse__label">Aktuálne kolo</span><span class="pulse__meta" id="heroSeason"></span></div>
-            </div>
+            </a>
             <div class="pulse__tile">
                 <strong class="pulse__value pulse__value--name" id="heroLeaderName">–</strong>
                 <div class="pulse__foot"><span class="pulse__label">Líder ratingu</span><span class="pulse__meta" id="heroLeaderMeta"></span></div>
@@ -78,7 +78,7 @@
 
     <main class="container layout" id="mainContainer">
         <div class="layout__main">
-            <section class="panel panel--narrow" data-reveal>
+            <section class="panel panel--narrow" id="latestRoundSection" data-reveal>
                 <div class="section-header"><h2 id="latestRoundTitle">Aktuálne Kolo</h2></div>
                 <div id="latestRoundContainer"></div>
             </section>
@@ -149,7 +149,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=1"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=28"></script>
+<script src="script.js?v=1000"></script>
 <script src="landing.js?v=10"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>

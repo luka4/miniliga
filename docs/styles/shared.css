@@ -10,8 +10,8 @@
   --color-surface: #ffffff;
   --color-surface-2: #fafaff;
 
-  --color-text: #111827;
-  --color-text-subtle: #374151;
+  --color-text: #1a2540;
+  --color-text-subtle: #46557a;
   --color-text-inverse: #ffffff;
 
   --color-muted: #6b7280;
@@ -21,8 +21,8 @@
   --color-border-strong: #d1d5db;
 
   /* Theme (Hybrid: Charcoal/Graphite + Blue + Coral + Lime) */
-  --color-primary: #111827;        /* charcoal */
-  --color-primary-hover: #0b1220;  /* deeper charcoal */
+  --color-primary: #2c3e63;        /* muted navy */
+  --color-primary-hover: #233253;  /* deeper navy */
 
   --color-accent: #3b82f6;         /* blue */
   --color-accent-hover: #2563eb;   /* blue hover */
@@ -45,10 +45,10 @@
   --color-info-soft: #eff6ff;
   --color-info-text: #1d4ed8;
 
-  --color-ink: #111827;
+  --color-ink: #2c3e63;
 
   --color-pill-bg: var(--color-accent-3);
-  --color-pill-text: #111827;
+  --color-pill-text: #1a2540;
 
   --color-medal-gold: #fef3c7;
   --color-medal-silver: #f3f4f6;
@@ -592,7 +592,7 @@ a {
 
 .achievement-badge-name {
   font-weight: 700;
-  color: #000;
+  color: var(--color-text);
   margin-bottom: 4px;
 }
 
@@ -732,7 +732,7 @@ a {
 .wo-notice {
     padding: 20px;
     text-align: center;
-    color: #000;
+    color: var(--color-text);
     font-style: italic;
     background-color: #dbeafe;
     border-radius: 4px;
@@ -981,8 +981,8 @@ a {
 .compact-match-table td.compact-cell--highlighted,
 .compact-match-table th.row-header--highlighted,
 .compact-match-table th.col-header--highlighted {
-  border: 2px solid #000 !important;
-  box-shadow: 0 0 0 1px #000;
+  border: 2px solid var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .compact-match-table th.row-header,
