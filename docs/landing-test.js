@@ -73,16 +73,44 @@
                 { transform: 'translateX(0) scaleX(1)' }
             ], { duration: d, easing: flight });
 
-            const ballX = ball.animate([
-                { translate: `${cx + dist}px 0`, easing: flight },
-                { translate: `${cx}px 0`, offset: 0.62, easing: 'ease-in' },
-                { translate: `${cx + dist}px 0` }
-            ], { duration: total, fill: 'forwards' });
-            const ballY = ball.animate([
-                { transform: `translateY(${hitY - rise}px) scale(1, 1)`, easing: 'cubic-bezier(0.55, 0, 1, 0.6)' },
-                { transform: `translateY(${hitY}px) scale(1.25, 0.75)`, offset: 0.62, easing: 'cubic-bezier(0, 0.4, 0.45, 1)' },
-                { transform: `translateY(${hitY - rise * (last ? 1.6 : 1)}px) scale(1, 1)` }
-            ], { duration: total, fill: 'forwards' });
+            let ballX, ballY;
+            if (!last) {
+                ballX = ball.animate([
+                    { translate: `${cx + dist}px 0`, easing: flight },
+                    { translate: `${cx}px 0`, offset: 0.62, easing: 'ease-in' },
+                    { translate: `${cx + dist}px 0` }
+                ], { duration: total, fill: 'forwards' });
+                ballY = ball.animate([
+                    { transform: `translateY(${hitY - rise}px) scale(1, 1)`, easing: 'cubic-bezier(0.55, 0, 1, 0.6)' },
+                    { transform: `translateY(${hitY}px) scale(1.25, 0.75)`, offset: 0.62, easing: 'cubic-bezier(0, 0.4, 0.45, 1)' },
+                    { transform: `translateY(${hitY - rise}px) scale(1, 1)` }
+                ], { duration: total, fill: 'forwards' });
+            } else {
+                // the last hit: the ball lands on top of the A (the right end of the word) and bounces
+                // lower and lower, each bounce shorter, until it comes to rest there
+                const heights = [0.14, 0.075, 0.04, 0.02].map(f => f * wm);
+                const times = heights.map(h => Math.sqrt(h / heights[0]) * 440);
+                const span = d + times.reduce((a, b) => a + b, 0);
+                const floorY = b.top - m.top + b.height * 0.08 - r;
+                const up = 'cubic-bezier(0, 0.4, 0.45, 1)', down = 'cubic-bezier(0.55, 0, 1, 0.6)';
+                const squash = 'scale(1.3, 0.7)';
+                const frames = [
+                    { transform: `translateY(${floorY - rise}px) scale(1, 1)`, easing: down },
+                    { transform: `translateY(${floorY}px) ${squash}`, offset: d / span, easing: up }
+                ];
+                let at = d;
+                heights.forEach((h, k) => {
+                    frames.push({ transform: `translateY(${floorY - h}px) scale(1, 1)`, offset: (at + times[k] / 2) / span, easing: down });
+                    at += times[k];
+                    frames.push({ transform: `translateY(${floorY}px) ${squash}`, offset: Math.min(1, at / span), easing: up });
+                });
+                ballX = ball.animate([
+                    { translate: `${cx + dist}px 0`, easing: flight },
+                    { translate: `${cx}px 0`, offset: d / span },
+                    { translate: `${cx}px 0` }
+                ], { duration: span, fill: 'forwards' });
+                ballY = ball.animate(frames, { duration: span, fill: 'forwards' });
+            }
 
             await letterAnim.finished.catch(() => {});
             // impact: the letter squashes, flashes the accent colour, and the word recoils
@@ -94,10 +122,11 @@
             h1.animate([
                 { transform: 'translateX(0)' }, { transform: `translateX(${-k}px)` }, { transform: 'translateX(0)' }
             ], { duration: last ? 320 : 180, easing: 'ease-out' });
-            await wait([ballX, ballY]);
+            if (!last) await wait([ballX, ballY]);
         }
-        ball.classList.remove('is-live');
         h1.classList.remove('is-anim');
+        // the ball stays resting on the A; a resize would leave it misplaced, so it leaves then
+        window.addEventListener('resize', () => { ball.style.opacity = 0; }, { once: true });
 
         // KOŠICKA drops in as one whole word, in the accent colour
         const tag = mark.querySelector('.hero__kosicka');
