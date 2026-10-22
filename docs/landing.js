@@ -4,32 +4,49 @@
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // --- Wordmark: size each line so it spans the full width of the hero ---
+    // --- Wordmark: one line, sized to span the full width of the hero ---
+    let fontsReady = false;
+    let introStarted = false;
+
     function fitLines() {
         const h1 = document.getElementById('heroName');
         if (!h1) return;
-        const lines = h1.querySelectorAll('.fit-line');
-        const stacked = window.matchMedia('(max-width: 700px)').matches;
+        const letters = h1.querySelectorAll('.hero__letter');
         // 1.013: the glyphs end a little inside their advance widths, so overscan to reach the margins
         const width = h1.clientWidth * 1.013;
         if (!width) return;
-        // Measure the whole text (or each line) at a reference size, then scale to fit.
+        // Measure the whole word at a reference size, then scale to fit.
         const ref = 100;
         const probe = document.createElement('span');
         probe.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:inherit;font-size:${ref}px;letter-spacing:0.04em;`;
         h1.appendChild(probe);
+        probe.textContent = Array.from(letters).map(l => l.textContent).join('');
         // the last letter's trailing spacing (0.04em) is not visible ink
-        const measure = text => { probe.textContent = text; return probe.getBoundingClientRect().width - ref * 0.04; };
-        if (stacked) {
-            let size = Infinity;
-            lines.forEach(l => { size = Math.min(size, ref * width / measure(l.textContent)); });
-            h1.style.fontSize = size + 'px';
-        } else {
-            const text = Array.from(lines).map(l => l.textContent).join('');
-            h1.style.fontSize = (ref * width / measure(text)) + 'px';
-        }
+        const measured = probe.getBoundingClientRect().width - ref * 0.04;
+        h1.style.fontSize = (ref * width / measured) + 'px';
         probe.remove();
+        if (!introStarted && !reduceMotion) h1.classList.add('is-anim');
         h1.classList.add('is-fitted');
+        if (fontsReady) startIntro(h1, letters);
+    }
+
+    // --- Intro: the letters run in from the right one after another, each starting once the previous has landed ---
+    function startIntro(h1, letters) {
+        if (introStarted) return;
+        introStarted = true;
+        if (reduceMotion || !h1.animate) { h1.classList.remove('is-anim'); return; }
+        let i = 0;
+        const next = () => {
+            if (i >= letters.length) { h1.classList.remove('is-anim'); return; }
+            const el = letters[i++];
+            const dist = h1.clientWidth - el.offsetLeft;
+            el.classList.add('is-in');
+            el.animate(
+                [{ transform: `translateX(${dist}px)` }, { transform: 'translateX(0)' }],
+                { duration: 340, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' }
+            ).onfinish = next;
+        };
+        next();
     }
 
     // --- Figures count up the first time they receive a value ---
@@ -107,10 +124,10 @@
         }
         window.addEventListener('resize', fitLines);
         // Never leave the title hidden if the font is slow: fit with the fallback face, refit on load
-        setTimeout(fitLines, 500);
+        setTimeout(() => { fontsReady = true; fitLines(); }, 800);
         if (document.fonts) {
-            // The display face is requested lazily: load it explicitly, then fit
-            const done = () => fitLines();
+            // The display face is requested lazily: load it explicitly, then fit and start the intro
+            const done = () => { fontsReady = true; fitLines(); };
             document.fonts.load('400 100px Anton').then(done, done);
             document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', done);
         }
