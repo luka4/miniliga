@@ -376,36 +376,6 @@ body:not(.loading) .pulse__tile:nth-child(4) { animation-delay: 0.39s; }
 #page-home .layout__side .tp-gain { padding: 4px 6px 2px; font-size: 16px; }
 #page-home .layout__side .section-description { margin-top: 8px; font-size: 13px; }
 
-/* Hero wordmark filled with the match footage: landing.js paints the video through the
-   letter shapes on a canvas; the h1 keeps the real text for layout, reading and no-JS */
-.hero__mark {
-  position: relative;
-  margin: 0 0 8px;
-  overflow: hidden;
-}
-
-.hero__mark .hero__name { margin: 0; }
-
-.hero__video {
-  position: absolute;
-  width: 1px;
-  height: 1px; /* taste-skill-ignore: hidden video source for the canvas */
-  opacity: 0;
-  pointer-events: none;
-}
-
-.hero__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.hero__mark.has-canvas .hero__name { color: transparent; }
-
-body:not(.loading) .hero__canvas { animation: rise 0.6s var(--ease) both; }
-
 @media (max-width: 1100px) {
   .layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "side"; }
   .layout__side { position: static; }

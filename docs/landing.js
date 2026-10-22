@@ -32,92 +32,6 @@
         h1.classList.add('is-fitted');
     }
 
-    // --- Wordmark filled with video: the footage is painted through the letter shapes ---
-    function initVideoWordmark() {
-        const mark = document.querySelector('.hero__mark');
-        const h1 = document.getElementById('heroName');
-        const video = document.getElementById('heroVideo');
-        if (!mark || !h1 || !video) return;
-        const canvas = document.createElement('canvas');
-        canvas.className = 'hero__canvas';
-        canvas.setAttribute('aria-hidden', 'true');
-        mark.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { canvas.remove(); return; }
-
-        // Calm the footage: half speed so the letters read as a name, not as flicker
-        video.playbackRate = 0.5;
-        video.addEventListener('loadedmetadata', () => { video.playbackRate = 0.5; });
-
-        let glyphs = [];
-        let w = 0, h = 0, dpr = 1, size = 0;
-
-        function layout() {
-            const box = h1.getBoundingClientRect();
-            if (!box.width || !h1.classList.contains('is-fitted')) return false;
-            dpr = Math.min(window.devicePixelRatio || 1, 2);
-            w = box.width; h = box.height;
-            canvas.width = Math.round(w * dpr);
-            canvas.height = Math.round(h * dpr);
-            size = parseFloat(getComputedStyle(h1).fontSize);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
-            if ('letterSpacing' in ctx) ctx.letterSpacing = `${size * 0.04}px`;
-            const ascent = ctx.measureText('M').fontBoundingBoxAscent || size * 1.17;
-            glyphs = Array.from(h1.querySelectorAll('.fit-line')).map(line => {
-                const range = document.createRange();
-                range.selectNodeContents(line);
-                const r = range.getBoundingClientRect();
-                return { text: line.textContent, x: r.left - box.left, y: r.top - box.top + ascent };
-            });
-            return true;
-        }
-
-        function draw() {
-            if (!glyphs.length || video.readyState < 2) return;
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, w, h);
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
-            if ('letterSpacing' in ctx) ctx.letterSpacing = `${size * 0.04}px`;
-            ctx.fillStyle = '#ffffff';
-            glyphs.forEach(g => ctx.fillText(g.text, g.x, g.y));
-            // Video only where letters are; a fog of white stays so dark footage never swallows a letter
-            ctx.globalCompositeOperation = 'source-atop';
-            ctx.globalAlpha = 0.26;
-            const vw = video.videoWidth, vh = video.videoHeight;
-            const scale = Math.max(w / vw, h / vh);
-            const sw = w / scale, sh = h / scale;
-            const sx = (vw - sw) / 2, sy = (vh - sh) * 0.72;
-            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
-            ctx.globalAlpha = 1;
-        }
-
-        let visible = true;
-        function tick() {
-            if (visible && !document.hidden) draw();
-            if ('requestVideoFrameCallback' in video) video.requestVideoFrameCallback(tick);
-            else requestAnimationFrame(tick);
-        }
-
-        function ready() {
-            if (!layout()) return;
-            mark.classList.add('has-canvas');
-            draw();
-        }
-
-        // Refit whenever the wordmark is re-measured
-        const refit = () => { if (layout()) { mark.classList.add('has-canvas'); draw(); } };
-        new MutationObserver(refit).observe(h1, { attributes: true, attributeFilter: ['style', 'class'] });
-        window.addEventListener('resize', () => requestAnimationFrame(refit));
-        if ('IntersectionObserver' in window) {
-            new IntersectionObserver(e => { visible = e[0].isIntersecting; }).observe(mark);
-        }
-        video.addEventListener('loadeddata', ready);
-        if (video.readyState >= 2) ready();
-        tick();
-    }
-
     // --- Figures count up the first time they receive a value ---
     function countUp(el, target) {
         if (reduceMotion || !(target > 0)) { el.textContent = target.toLocaleString('sk-SK'); return; }
@@ -181,9 +95,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const vid = document.getElementById('heroVideo');
-        if (vid && reduceMotion) { vid.removeAttribute('autoplay'); vid.pause(); }
-        initVideoWordmark();
         watchCounts();
         initReveal();
         staggerRows();
