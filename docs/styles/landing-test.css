@@ -16,7 +16,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--color-accent-2);
+  color: var(--color-highlight);
 }
 .hero__k { display: inline-block; }
 .hero__mark.is-anim .hero__k:not(.is-in) { opacity: 0; }
@@ -28,7 +28,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-accent-2);
+  background: #fff;
   opacity: 0;
   pointer-events: none;
   will-change: transform, translate;

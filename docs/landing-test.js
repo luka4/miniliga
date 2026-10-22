@@ -90,7 +90,7 @@
             el.animate([
                 { transform: 'scale(1.12, 0.86)' }, { transform: 'scale(0.98, 1.03)', offset: 0.55 }, { transform: 'scale(1, 1)' }
             ], { duration: last ? 380 : 240, easing: 'ease-out' });
-            el.animate([{ color: 'var(--color-accent-2)' }, { color: '#fff' }], { duration: last ? 600 : 380, easing: 'ease-out' });
+            el.animate([{ color: 'var(--color-highlight)' }, { color: '#fff' }], { duration: last ? 600 : 380, easing: 'ease-out' });
             h1.animate([
                 { transform: 'translateX(0)' }, { transform: `translateX(${-k}px)` }, { transform: 'translateX(0)' }
             ], { duration: last ? 320 : 180, easing: 'ease-out' });
