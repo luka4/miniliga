@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Cookie consent + Google Analytics (loaded only after consent) -->
+    <script src="cookie-consent.js"></script>
+    <title>Test | Košická Miniliga</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Výsledky, tabuľky a ratingy hráčov pre Košickú stolnotenisovú Miniligu.">
+    <meta property="og:site_name" content="Košická Miniliga">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="sk_SK">
+    <meta property="og:title" content="Košická Miniliga | Stolný tenis Košice">
+    <meta property="og:description" content="Výsledky, tabuľky a ratingy hráčov pre Košickú stolnotenisovú Miniligu.">
+    <meta property="og:image" content="https://miniliga.sk/media/og-image.png?v=1">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Miniliga: Košická stolnotenisová liga">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Košická Miniliga | Stolný tenis Košice">
+    <meta name="twitter:description" content="Výsledky, tabuľky a ratingy hráčov pre Košickú stolnotenisovú Miniligu.">
+    <meta name="twitter:image" content="https://miniliga.sk/media/og-image.png?v=1">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="preload" href="fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles/fonts.css?v=1">
+    <link rel="stylesheet" href="styles/shared.css?v=7">
+    <link rel="stylesheet" href="styles/sport.css?v=102">
+    <link rel="stylesheet" href="styles/landing.css?v=20">
+    <link rel="stylesheet" href="styles/landing-test.css?v=1">
+    <noscript><style>.hero__name{visibility:visible!important}</style></noscript>
+</head>
+<body id="page-home" class="sport">
+
+<div id="pageContent">
+    <div id="mainNavContainer"></div>
+
+    <div id="disclaimerContainer" class="disclaimer-container" style="display: none;"></div>
+
+    <header class="hero" id="hero">
+        <div class="hero__mark">
+            <span class="hero__kosicka" aria-hidden="true"><span class="hero__k">K</span><span class="hero__k">O</span><span class="hero__k">Š</span><span class="hero__k">I</span><span class="hero__k">C</span><span class="hero__k">K</span><span class="hero__k">A</span></span>
+            <h1 class="hero__name" id="heroName" aria-label="Košická Miniliga">
+                <span class="hero__letter" aria-hidden="true">M</span><span class="hero__letter" aria-hidden="true">I</span><span class="hero__letter" aria-hidden="true">N</span><span class="hero__letter" aria-hidden="true">I</span><span class="hero__letter" aria-hidden="true">L</span><span class="hero__letter" aria-hidden="true">I</span><span class="hero__letter" aria-hidden="true">G</span><span class="hero__letter" aria-hidden="true">A</span>
+            </h1>
+            <span class="hero__ball" aria-hidden="true"></span>
+        </div>
+
+        <div class="hero__top">
+            <div class="hero__intro">
+                <p class="hero__lead">Košická stolnotenisová liga: rating, tabuľka a výsledky každého kola.</p>
+                <p class="hero__note">Toto je neoficiálna stránka. Oficiálne výsledky Miniligy nájdete na <a href="http://www.autrin.sk/miniligake_app.php?sport_id=1&amp;sutaz_id=1&amp;rocnik_id=4&amp;druzstvo_id=0&amp;kola_zobr=1" target="_blank" rel="noopener">autrin.sk</a>.</p>
+            </div>
+            <div class="hero__actions">
+                <a class="btn btn--accent" href="table.html">Tabuľka</a>
+                <a class="btn btn--ghost" href="rating.html">Rating hráčov</a>
+            </div>
+        </div>
+
+        <div class="pulse" id="pulse">
+            <a class="pulse__tile pulse__tile--round" href="#latestRoundSection">
+                <strong class="pulse__value" id="heroRound">–</strong>
+                <div class="pulse__foot"><span class="pulse__label">Aktuálne kolo</span><span class="pulse__meta" id="heroSeason"></span></div>
+            </a>
+            <div class="pulse__tile">
+                <strong class="pulse__value pulse__value--name" id="heroLeaderName">–</strong>
+                <div class="pulse__foot"><span class="pulse__label">Líder ratingu</span><span class="pulse__meta" id="heroLeaderMeta"></span></div>
+            </div>
+            <div class="pulse__tile">
+                <strong class="pulse__value pulse__value--name" id="heroGainName">–</strong>
+                <div class="pulse__foot"><span class="pulse__label">Top výkon kola</span><span class="pulse__meta" id="heroGainMeta"></span></div>
+            </div>
+            <div class="pulse__tile pulse__tile--eff">
+                <strong class="pulse__value pulse__value--name" id="heroEffName">–</strong>
+                <div class="pulse__foot"><span class="pulse__label">Najefektívnejší hráč</span><span class="pulse__meta" id="heroEffMeta"></span></div>
+            </div>
+            <dl class="pulse__tile pulse__tile--count">
+                <div><dt>kôl</dt><dd class="count" id="totalRounds">0</dd></div>
+                <div><dt>tímových zápasov</dt><dd class="count" id="totalTeamMatches">0</dd></div>
+                <div><dt>zápasov</dt><dd class="count" id="totalMatches">0</dd></div>
+                <div><dt>setov</dt><dd class="count" id="totalSets">0</dd></div>
+            </dl>
+        </div>
+    </header>
+
+    <main class="container layout" id="mainContainer">
+        <div class="layout__main">
+            <section class="panel panel--narrow" id="latestRoundSection" data-reveal>
+                <div class="section-header"><h2 id="latestRoundTitle">Aktuálne Kolo</h2></div>
+                <div id="latestRoundContainer"></div>
+            </section>
+
+            <div class="duo">
+                <section class="panel" data-reveal>
+                    <div class="section-header"><h2>Predchádzajúce Kolo: <span id="prevRoundTitle"></span></h2></div>
+                    <div id="prevRoundContainer"></div>
+                </section>
+
+                <section class="panel" id="upcomingMatchesContainer" data-reveal>
+                    <div class="section-header"><h2>Nadchádzajúce Zápasy: <span id="nextRoundTitle"></span></h2></div>
+                    <div id="upcomingList" class="upcoming-list"></div>
+                </section>
+            </div>
+
+            <section class="panel panel--narrow upsets" data-reveal>
+                <div class="section-header"><h2>Top 5 prekvapení kola</h2></div>
+                <div id="upsetContainer" class="upset-list"></div>
+            </section>
+        </div>
+
+        <aside class="layout__side">
+            <section class="panel" data-reveal>
+                <div class="section-header"><h2>Top výkon týždňa</h2></div>
+                <ul class="top-players-list" id="topGainersList"></ul>
+            </section>
+            <section class="panel" data-reveal>
+                <div class="section-header"><h2>Najefektívnejší hráči</h2></div>
+                <ul class="top-players-list" id="topEffectivenessList"></ul>
+                <p class="section-description">Hráči, ktorí v tomto kole zahrali tak, akoby mali rating uvedený vedľa mena.</p>
+            </section>
+        </aside>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3 class="footer-title">Košická Miniliga</h3>
+                <p class="footer-description">Výsledky, tabuľky a ratingy hráčov pre Košickú stolnotenisovú Miniligu. Toto je neoficiálna stránka. Oficiálne výsledky Miniligy nájdete na <a href="http://www.autrin.sk/miniligake_app.php?sport_id=1&amp;sutaz_id=1&amp;rocnik_id=4&amp;druzstvo_id=0&amp;kola_zobr=1" target="_blank" rel="noopener">autrin.sk</a>.</p>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-heading">Navigácia</h4>
+                <nav class="footer-nav">
+                    <a href="index.html" class="footer-link">Domov</a>
+                    <a href="results.html" class="footer-link">Výsledky</a>
+                    <a href="rating.html" class="footer-link">Rating</a>
+                    <a href="table.html" class="footer-link">Tabuľka</a>
+                    <a href="prediction.html" class="footer-link">Predikcie</a>
+                    <a href="highlights.html" class="footer-link">Zaujímavosti</a>
+                </nav>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-heading">O stránke</h4>
+                <p class="footer-text">Stolný tenis v Košiciach</p>
+                <p class="footer-text">Systém ratingov založený na ELO</p>
+                <p class="footer-text">Kontakty: <a href="mailto:info@miniliga.sk">info@miniliga.sk</a></p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="footer-copyright">&copy; <span id="currentYear"></span> miniliga.sk.</p>
+            <span class="footer-credit">Video: <a href="https://commons.wikimedia.org/wiki/File:%E8%A1%A5%E6%A1%A3_20171101%E8%B5%9B%E5%89%8D%E8%AE%AD%E7%BB%83.webm" target="_blank" rel="noopener">„补档 20171101赛前训练“</a>, 裴洛阳, CC BY 2.5, Wikimedia Commons</span>
+            <a href="cookies.html" class="footer-cookies-link">Nastavenia cookies</a>
+        </div>
+    </footer>
+</div>
+
+<script src="googleSheetsLoader.js?v=3"></script>
+<script src="seasonRosters.js?v=2"></script>
+<script src="matchData.js?v=8"></script>
+<script src="script.js?v=1006"></script>
+<script src="landing-test.js?v=1"></script>
+<script src="spinbook-promo.js?v=1"></script>
+</body>
+</html>
