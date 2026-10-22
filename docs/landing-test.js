@@ -17,6 +17,7 @@
         // 1.013: the glyphs end a little inside their advance widths, so overscan to reach the margins
         const width = h1.clientWidth * 1.013;
         if (!width) return;
+        const LANE = 0.19;      // room (in word sizes) kept free after the A for the bouncing ball
         // Measure the whole word at a reference size, then scale to fit.
         const ref = 100;
         const probe = document.createElement('span');
@@ -25,7 +26,7 @@
         probe.textContent = Array.from(letters).map(l => l.textContent).join('');
         // the last letter's trailing spacing (0.04em) is not visible ink
         const measured = probe.getBoundingClientRect().width - ref * 0.04;
-        h1.style.fontSize = (ref * width / measured) + 'px';
+        h1.style.fontSize = (ref * width / (measured + ref * LANE * 1.013)) + 'px';
         probe.remove();
         mark.style.setProperty('--wm', h1.style.fontSize);
         if (!introStarted && !reduceMotion) { h1.classList.add('is-anim'); mark.classList.add('is-anim'); }
@@ -37,6 +38,12 @@
     // and rebounds; the rally speeds up and ends in a smash. Then the whole word KOŠICKA drops in above it. ---
     const wait = anims => Promise.all(anims.map(a => a.finished.catch(() => {})));
 
+    // Where the ball rests: in the free lane right after the A, on the baseline of the word
+    function restGeometry(h1, lastLetter, r) {
+        const m = h1.parentElement.getBoundingClientRect(), b = lastLetter.getBoundingClientRect();
+        return { x: b.right - m.left + r * 0.2, y: b.bottom - m.top - b.height * 0.04 - r };
+    }
+
     async function startIntro(h1, letters) {
         if (introStarted) return;
         introStarted = true;
@@ -47,7 +54,7 @@
         if (reduceMotion || !h1.animate || !ball) { done(); return; }
 
         const wm = parseFloat(h1.style.fontSize);
-        const r = Math.max(wm * 0.085, 12);
+        const r = Math.max(wm * 0.085, 11);
         const rise = wm * 0.17;
         ball.style.width = ball.style.height = r + 'px';
         ball.classList.add('is-live');
@@ -86,28 +93,33 @@
                     { transform: `translateY(${hitY - rise}px) scale(1, 1)` }
                 ], { duration: total, fill: 'forwards' });
             } else {
-                // the last hit: the ball lands on top of the A (the right end of the word) and bounces
-                // lower and lower, each bounce shorter, until it comes to rest there
-                const heights = [0.14, 0.075, 0.04, 0.02].map(f => f * wm);
+                // the last hit: the ball drives the A in, then arcs over to the free lane after the A,
+                // drops to the baseline there and bounces lower and lower until it comes to rest
+                // `m` and `b` were measured before the letter started moving
+                const rest = { x: b.right - m.left + r * 0.2, y: b.bottom - m.top - b.height * 0.04 - r };
+                const heights = [0.22, 0.12, 0.065, 0.032].map(f => f * wm);
                 const times = heights.map(h => Math.sqrt(h / heights[0]) * 440);
-                const span = d + times.reduce((a, b) => a + b, 0);
-                const floorY = b.top - m.top + b.height * 0.08 - r;
+                const arc = 640;
+                const span = d + arc + times.reduce((a, b) => a + b, 0);
                 const up = 'cubic-bezier(0, 0.4, 0.45, 1)', down = 'cubic-bezier(0.55, 0, 1, 0.6)';
                 const squash = 'scale(1.3, 0.7)';
                 const frames = [
-                    { transform: `translateY(${floorY - rise}px) scale(1, 1)`, easing: down },
-                    { transform: `translateY(${floorY}px) ${squash}`, offset: d / span, easing: up }
+                    { transform: `translateY(${hitY - rise}px) scale(1, 1)`, easing: down },
+                    { transform: `translateY(${hitY}px) scale(1.25, 0.75)`, offset: d / span, easing: up },
+                    { transform: `translateY(${hitY - rise * 1.6}px) scale(1, 1)`, offset: (d + arc * 0.3) / span, easing: down },
+                    { transform: `translateY(${rest.y}px) ${squash}`, offset: (d + arc) / span, easing: up }
                 ];
-                let at = d;
+                let at = d + arc;
                 heights.forEach((h, k) => {
-                    frames.push({ transform: `translateY(${floorY - h}px) scale(1, 1)`, offset: (at + times[k] / 2) / span, easing: down });
+                    frames.push({ transform: `translateY(${rest.y - h}px) scale(1, 1)`, offset: (at + times[k] / 2) / span, easing: down });
                     at += times[k];
-                    frames.push({ transform: `translateY(${floorY}px) ${squash}`, offset: Math.min(1, at / span), easing: up });
+                    frames.push({ transform: `translateY(${rest.y}px) ${squash}`, offset: Math.min(1, at / span), easing: up });
                 });
                 ballX = ball.animate([
                     { translate: `${cx + dist}px 0`, easing: flight },
-                    { translate: `${cx}px 0`, offset: d / span },
-                    { translate: `${cx}px 0` }
+                    { translate: `${cx}px 0`, offset: d / span, easing: 'ease-in-out' },
+                    { translate: `${rest.x}px 0`, offset: (d + arc) / span },
+                    { translate: `${rest.x}px 0` }
                 ], { duration: span, fill: 'forwards' });
                 ballY = ball.animate(frames, { duration: span, fill: 'forwards' });
             }
@@ -125,8 +137,18 @@
             if (!last) await wait([ballX, ballY]);
         }
         h1.classList.remove('is-anim');
-        // the ball stays resting on the A; a resize would leave it misplaced, so it leaves then
-        window.addEventListener('resize', () => { ball.style.opacity = 0; }, { once: true });
+        // the ball stays resting after the A; a resize moves it to the new resting place
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(() => {
+                ball.getAnimations().forEach(a => a.cancel());
+                const w = parseFloat(h1.style.fontSize);
+                const rr = Math.max(w * 0.085, 11);
+                ball.style.width = ball.style.height = rr + 'px';
+                const g = restGeometry(h1, letters[letters.length - 1], rr);
+                ball.style.translate = `${g.x}px 0`;
+                ball.style.transform = `translateY(${g.y}px)`;
+            });
+        });
 
         // KOŠICKA drops in as one whole word, in the accent colour
         const tag = mark.querySelector('.hero__kosicka');
