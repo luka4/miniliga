@@ -4859,6 +4859,64 @@ function renderRatingPage() {
         });
         wrapper.addEventListener('scroll', syncHorizontal, {passive: true});
 
+        // Desktop: the wrapper's own scrollbar sits below the (tall) table, so add a
+        // viewport-bottom scrollbar and drag-to-scroll with the mouse
+        if (!wrapper.dataset.hScrollBound) {
+            wrapper.dataset.hScrollBound = '1';
+            const bar = document.createElement('div');
+            bar.id = 'stickyHScroll';
+            const barInner = document.createElement('div');
+            bar.appendChild(barInner);
+            document.body.appendChild(bar);
+            let syncing = false;
+            const updateBar = () => {
+                barInner.style.width = wrapper.scrollWidth + 'px';
+                bar.style.left = wrapper.getBoundingClientRect().left + 'px';
+                bar.style.width = wrapper.clientWidth + 'px';
+                const r = wrapper.getBoundingClientRect();
+                const needed = wrapper.scrollWidth > wrapper.clientWidth + 1;
+                // hide while the wrapper's own scrollbar is on screen
+                bar.style.display = needed && r.top < window.innerHeight && r.bottom > window.innerHeight ? 'block' : 'none';
+            };
+            bar.addEventListener('scroll', () => {
+                if (syncing) { syncing = false; return; }
+                syncing = true;
+                wrapper.scrollLeft = bar.scrollLeft;
+            });
+            wrapper.addEventListener('scroll', () => {
+                if (bar.scrollLeft === wrapper.scrollLeft) return;
+                syncing = true;
+                bar.scrollLeft = wrapper.scrollLeft;
+            }, {passive: true});
+            window.addEventListener('scroll', updateBar, {passive: true});
+            window.addEventListener('resize', updateBar);
+            setInterval(updateBar, 500);
+            updateBar();
+
+            let startX = 0, startLeft = 0, dragging = false, moved = false;
+            wrapper.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                dragging = true; moved = false;
+                startX = e.clientX; startLeft = wrapper.scrollLeft;
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                const dx = e.clientX - startX;
+                if (!moved && Math.abs(dx) < 5) return;
+                moved = true;
+                wrapper.classList.add('is-dragging');
+                wrapper.scrollLeft = startLeft - dx;
+            });
+            window.addEventListener('mouseup', () => {
+                dragging = false;
+                wrapper.classList.remove('is-dragging');
+            });
+            // a drag must not open the player modal
+            wrapper.addEventListener('click', (e) => {
+                if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+            }, true);
+        }
+
         // Initial sync
         setTimeout(updateWidths, 100);
         updateWidths();
