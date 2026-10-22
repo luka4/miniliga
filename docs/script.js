@@ -1337,6 +1337,24 @@ function isPlayedMatch(m) {
     return true;
 }
 
+// Collapsed team-ratings block shown under the "Predikcia" of an expanded team match.
+function buildRatingsCollapseHtml(teamA, teamB, ratingsA, ratingsB, includeActual) {
+    if (!ratingsA || !ratingsB) return '';
+    const item = (label, tip, value) => `<div class="rating-info-item">
+        <span class="rating-label">${label}:
+            <span class="tooltip-container"><span class="tooltip-icon">ℹ️</span><span class="tooltip-text">${tip}</span></span>
+        </span>
+        <span class="rating-value">${value.toFixed(2)}</span>
+    </div>`;
+    const col = (teamName, r) => `<div class="team-rating-info">
+        <div class="rating-team-name">${escapeHtml(teamName)}</div>
+        ${includeActual ? item('Skutočný rating', 'Priemerný rating hráčov, ktorí hrali v zápase', r.actualRating) : ''}
+        ${item('Aktívny rating', 'Priemerný rating 4 najaktívnejších hráčov v tíme', r.activeRating)}
+        ${item('Celkový rating', 'Priemerný rating všetkých hráčov v tíme', r.overallRating)}
+    </div>`;
+    return `<details class="match-ratings"><summary>Ratingy tímov</summary><div class="match-ratings__grid">${col(teamA, ratingsA)}${col(teamB, ratingsB)}</div></details>`;
+}
+
 // --- Date helpers (used for "Aktuálne Kolo" selection on home page) ---
 function parseMatchDate(raw) {
     if (!raw) return null;
@@ -2418,6 +2436,34 @@ function initFlipCards(root = document) {
 }
 
 // --- HOME PAGE ---
+// --- HOME HERO: live league pulse (round, rating leader, best performance, most effective player) ---
+function renderHomeHero({ players, currentRoundId, playedMatches, upcomingMatches }) {
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    const roundMatches = currentRoundId ? matchResults.filter(m => getMatchRoundId(m) === currentRoundId) : [];
+    const sample = roundMatches[0] || null;
+
+    setText('heroRound', sample ? sample.round : '–');
+    setText('heroSeason', sample && sample.season ? sample.season.charAt(0) + sample.season.slice(1).toLowerCase() : 'Zatiaľ žiadne zápasy');
+
+    // Rating leader among players who played in the current season
+    const season = sample ? sample.season : null;
+    const list = Object.values(players);
+    const pool = list.filter(p => p.matches > 0 && (!season || p.lastPlayedSeason === season));
+    const leader = (pool.length ? pool : list.filter(p => p.matches > 0)).sort((a, b) => b.rating - a.rating)[0];
+    setText('heroLeaderName', leader ? leader.name : '–');
+    setText('heroLeaderMeta', leader ? `${Math.round(leader.rating)} rating · ${leader.team}` : '');
+
+    // Best performance of the round
+    const best = list.filter(p => p.roundGain > 0).sort((a, b) => b.roundGain - a.roundGain)[0];
+    setText('heroGainName', best ? best.name : '–');
+    setText('heroGainMeta', best ? `+${best.roundGain.toFixed(1)} rating · ${best.team}` : 'V tomto kole zatiaľ nikto');
+
+    // Most effective player of the round
+    const eff = list.filter(p => Number.isFinite(p.latestRoundEffectiveness)).sort((a, b) => b.latestRoundEffectiveness - a.latestRoundEffectiveness)[0];
+    setText('heroEffName', eff ? eff.name : '–');
+    setText('heroEffMeta', eff ? `${eff.latestRoundEffectiveness.toFixed(1)} efektivita · ${eff.team}` : 'V tomto kole zatiaľ nikto');
+}
+
 function renderHomePage() {
     // Load disclaimer from Google Sheets (Config!B3)
     const loadDisclaimerFromSheet = async () => {
@@ -2463,6 +2509,14 @@ function renderHomePage() {
     const playerArr = Object.values(players);
     const teamMap = buildTeamMap(playerArr);
 
+    // Hero pulse
+    renderHomeHero({
+        players,
+        currentRoundId,
+        playedMatches,
+        upcomingMatches: matchResults.filter(m => !isPlayedMatch(m) && getMatchRoundId(m) !== currentRoundId)
+    });
+
     // Stats
     const uniqueTeamMatches = new Set(playedMatches.map(m => `${getMatchRoundId(m)}_${m.player_a_team}_${m.player_b_team}`));
     document.getElementById('totalRounds').innerText = roundsSet.size;
@@ -2490,8 +2544,6 @@ function renderHomePage() {
         const points = totalSets * 18;
         setsBack.innerText = `Ak má jeden set v priemere ~18 lôpt, tak sa odohralo približne ${points} lôpt.`;
     }
-
-    initFlipCards(document.getElementById('mainContainer') || document);
 
     const currentTitleText = currentRoundId ? (() => {
         // Prefer the round name from any match in that round; fall back to legacy string.
@@ -3638,9 +3690,9 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
                 
                 predictionHtml = `<div class="match-prediction-section">
-                    <div class="prediction-label">Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase):</div>
+                    <div class="prediction-label" title="Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase)">Predikcia</div>
                     <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
-                </div>`;
+                </div>${buildRatingsCollapseHtml(match.teamA, match.teamB, ratingsA, ratingsB, true)}`;
             }
 
             const getTeamStatsHtml = (teamName, align, teamRatings = null) => {
@@ -3654,42 +3706,6 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 const tLogo = getTeamLogoSrc(teamName);
                 let h = `<div class="team-stats ${align}">`;
                 if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
-                
-                // Add rating information if available
-                if (teamRatings) {
-                    h += `<div class="team-rating-info">
-                        <div class="rating-info-item">
-                            <span class="rating-label">
-                                Skutočný rating:
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">ℹ️</span>
-                                    <span class="tooltip-text">Priemerný rating hráčov, ktorí hrali v zápase</span>
-                                </span>
-                            </span>
-                            <span class="rating-value">${teamRatings.actualRating.toFixed(2)}</span>
-                        </div>
-                        <div class="rating-info-item">
-                            <span class="rating-label">
-                                Aktívny rating:
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">ℹ️</span>
-                                    <span class="tooltip-text">Priemerný rating 4 najaktívnejších hráčov v tíme</span>
-                                </span>
-                            </span>
-                            <span class="rating-value">${teamRatings.activeRating.toFixed(2)}</span>
-                        </div>
-                        <div class="rating-info-item">
-                            <span class="rating-label">
-                                Celkový rating:
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">ℹ️</span>
-                                    <span class="tooltip-text">Priemerný rating všetkých hráčov v tíme</span>
-                                </span>
-                            </span>
-                            <span class="rating-value">${teamRatings.overallRating.toFixed(2)}</span>
-                        </div>
-                    </div>`;
-                }
                 
                 const isMobile = isMobileViewport();
                 list.forEach((p, index) => {
@@ -3977,45 +3993,11 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                 predScoreB = Math.min(totalSets, Math.max(0, predScoreB));
                 
                 predictionHtml = `<div class="match-prediction-section">
-                    <div class="prediction-label">Predikcia pred zápasom (použitý aktívny rating - priemerný rating 4 najaktívnejších hráčov):</div>
+                    <div class="prediction-label" title="Predikcia pred zápasom (použitý aktívny rating - priemerný rating 4 najaktívnejších hráčov)">Predikcia</div>
                     <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
                 </div>`;
 
-                const getTeamRatingsHtml = (teamName, align, teamRatings) => {
-                    const tLogo = getTeamLogoSrc(teamName);
-                    let h = `<div class="team-stats ${align}">`;
-                    if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
-                    
-                    // Add rating information (only active and overall, no actual rating)
-                    h += `<div class="team-rating-info">
-                        <div class="rating-info-item">
-                            <span class="rating-label">
-                                Aktívny rating:
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">ℹ️</span>
-                                    <span class="tooltip-text">Priemerný rating 4 najaktívnejších hráčov v tíme</span>
-                                </span>
-                            </span>
-                            <span class="rating-value">${teamRatings.activeRating.toFixed(2)}</span>
-                        </div>
-                        <div class="rating-info-item">
-                            <span class="rating-label">
-                                Celkový rating:
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">ℹ️</span>
-                                    <span class="tooltip-text">Priemerný rating všetkých hráčov v tíme</span>
-                                </span>
-                            </span>
-                            <span class="rating-value">${teamRatings.overallRating.toFixed(2)}</span>
-                        </div>
-                    </div>`;
-                    h += `</div>`;
-                    return h;
-                };
-
-                const scoreBadgeHtml = `<div class="score-badge score-badge--overlay score-badge--vs">VS</div>`;
-                const ratingsHtml = `<div class="match-stats-container">${getTeamRatingsHtml(match.teamA, 'left', ratingsA)}${scoreBadgeHtml}${getTeamRatingsHtml(match.teamB, 'right', ratingsB)}</div>`;
-                details.innerHTML = predictionHtml + ratingsHtml;
+                details.innerHTML = predictionHtml + buildRatingsCollapseHtml(match.teamA, match.teamB, ratingsA, ratingsB, false);
             } else {
                 details.innerHTML = '';
             }
@@ -5176,7 +5158,7 @@ function renderRatingPage() {
         const hiddenMatches = allMatches.slice(5);
         const hasMoreMatches = hiddenMatches.length > 0;
 
-        let html = `<div class='history-section'><div class='history-title'>História Zápasov: ${p.name}</div>`;
+        let html = '';
         
         // Render visible matches (first 5)
         visibleMatches.forEach(m => {
@@ -5713,7 +5695,6 @@ function renderTablePage() {
         wrapper.className = 'table-section';
 
         const title = document.createElement('h2');
-        title.style.cssText = "color: var(--color-primary); margin: 25px 0 10px 0; padding-left: 5px; border-left: 4px solid var(--color-primary);";
         title.innerText = def.title;
         wrapper.appendChild(title);
 
@@ -5806,7 +5787,7 @@ function renderTablePage() {
     };
 
     const viewState = {
-        mergedEnabled: false,
+        mergedEnabled: true,
         mergeSeasonGroups: []
     };
 
@@ -5825,7 +5806,7 @@ function renderTablePage() {
     rerender();
 
     if (viewToggle && !viewToggle.dataset.bound) {
-        viewToggle.checked = false;
+        viewToggle.checked = viewState.mergedEnabled;
         viewToggle.addEventListener('change', () => {
             viewState.mergedEnabled = !!viewToggle.checked;
             setViewToggleLabel();
@@ -6760,8 +6741,6 @@ function renderMyStatsPage() {
             </div>`;
         });
 
-        html += `</div>`;
-        
         // Add "Show all matches" button if there are more matches
         if (hasMoreMatches) {
             html += `<div class="show-all-matches-container">
@@ -7061,7 +7040,6 @@ function renderMyStatsPage() {
         document.getElementById('myStatsName').textContent = p.name;
         document.getElementById('myStatsTeam').textContent = getCurrentTeamOfPlayer(p) || '-';
         renderPlayerSeasonTeams(document.getElementById('myStatsSeasonTeams'), p.name);
-        document.getElementById('myStatsAvatar').textContent = p.name.charAt(0).toUpperCase();
 
         // Core stats
         const rank = ratingRanking.get(normalizePlayerKey(p.name)) || '?';
@@ -8360,40 +8338,6 @@ function renderMyTeamPage() {
                 let h = `<div class="team-stats ${align}">`;
                 if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
                 
-                // Add rating information with tooltips
-                h += `<div class="team-rating-info">
-                    <div class="rating-info-item">
-                        <span class="rating-label">
-                            Skutočný rating:
-                            <span class="tooltip-container">
-                                <span class="tooltip-icon">ℹ️</span>
-                                <span class="tooltip-text">Priemerný rating hráčov, ktorí hrali v zápase</span>
-                            </span>
-                        </span>
-                        <span class="rating-value">${teamRatings.actualRating.toFixed(2)}</span>
-                    </div>
-                    <div class="rating-info-item">
-                        <span class="rating-label">
-                            Aktívny rating:
-                            <span class="tooltip-container">
-                                <span class="tooltip-icon">ℹ️</span>
-                                <span class="tooltip-text">Priemerný rating 4 najaktívnejších hráčov v tíme</span>
-                            </span>
-                        </span>
-                        <span class="rating-value">${teamRatings.activeRating.toFixed(2)}</span>
-                    </div>
-                    <div class="rating-info-item">
-                        <span class="rating-label">
-                            Celkový rating:
-                            <span class="tooltip-container">
-                                <span class="tooltip-icon">ℹ️</span>
-                                <span class="tooltip-text">Priemerný rating všetkých hráčov v tíme</span>
-                            </span>
-                        </span>
-                        <span class="rating-value">${teamRatings.overallRating.toFixed(2)}</span>
-                    </div>
-                </div>`;
-                
                 const isMobile = isMobileViewport();
                 list.forEach((p) => {
                     h += `<div class="player-stat-row">
@@ -8409,7 +8353,7 @@ function renderMyTeamPage() {
             const predictionHtml = `<div class="match-prediction-section">
                 <div class="prediction-label">Predikcia pred zápasom (použitý skutočný rating - priemerný rating hráčov, ktorí hrali v zápase):</div>
                 <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
-            </div>`;
+            </div>${buildRatingsCollapseHtml(match.teamA, match.teamB, ratingsA, ratingsB, true)}`;
 
             const scoreBadgeHtml = `<div class="score-badge score-badge--overlay ${scoreBadgeClass}">${scoreA}-${scoreB}</div>`;
             const statsHtml = `<div class="match-stats-container">${getTeamStatsHtml(match.teamA, 'left', ratingsA)}${scoreBadgeHtml}${getTeamStatsHtml(match.teamB, 'right', ratingsB)}</div>`;
@@ -8783,40 +8727,6 @@ function renderMyTeamPage() {
                             let h = `<div class="team-stats ${align}">`;
                             if (tLogo) h += `<div class="team-logo-stats"><img class="team-logo-large" src="${tLogo}" alt="${escapeAttr(teamName)} logo" loading="lazy"></div>`;
                             
-                            // Add rating information with tooltips
-                            h += `<div class="team-rating-info">
-                                <div class="rating-info-item">
-                                    <span class="rating-label">
-                                        Skutočný rating:
-                                        <span class="tooltip-container">
-                                            <span class="tooltip-icon">ℹ️</span>
-                                            <span class="tooltip-text">Priemerný rating hráčov, ktorí hrali v zápase</span>
-                                        </span>
-                                    </span>
-                                    <span class="rating-value">${teamRatings.actualRating.toFixed(2)}</span>
-                                </div>
-                                <div class="rating-info-item">
-                                    <span class="rating-label">
-                                        Aktívny rating:
-                                        <span class="tooltip-container">
-                                            <span class="tooltip-icon">ℹ️</span>
-                                            <span class="tooltip-text">Priemerný rating 4 najaktívnejších hráčov v tíme</span>
-                                        </span>
-                                    </span>
-                                    <span class="rating-value">${teamRatings.activeRating.toFixed(2)}</span>
-                                </div>
-                                <div class="rating-info-item">
-                                    <span class="rating-label">
-                                        Celkový rating:
-                                        <span class="tooltip-container">
-                                            <span class="tooltip-icon">ℹ️</span>
-                                            <span class="tooltip-text">Priemerný rating všetkých hráčov v tíme</span>
-                                        </span>
-                                    </span>
-                                    <span class="rating-value">${teamRatings.overallRating.toFixed(2)}</span>
-                                </div>
-                            </div>`;
-                            
                             const isMobile = isMobileViewport();
                             list.forEach((p) => {
                                 h += `<div class="player-stat-row">
@@ -8832,7 +8742,7 @@ function renderMyTeamPage() {
                         const predictionHtml = `<div class="match-prediction-section">
                             <div class="prediction-label">Systémová predikcia pred zápasom:</div>
                             <div class="prediction-score">${escapeHtml(match.teamA)} ${predScoreA} : ${predScoreB} ${escapeHtml(match.teamB)}</div>
-                        </div>`;
+                        </div>${buildRatingsCollapseHtml(match.teamA, match.teamB, ratingsA, ratingsB, true)}`;
 
                         const scoreBadgeHtml = `<div class="score-badge score-badge--overlay ${scoreBadgeClass}">${scoreA}-${scoreB}</div>`;
                         const statsHtml = `<div class="match-stats-container">${getTeamStatsHtml(match.teamA, 'left', ratingsA)}${scoreBadgeHtml}${getTeamStatsHtml(match.teamB, 'right', ratingsB)}</div>`;
@@ -9216,7 +9126,7 @@ function renderMyTeamPage() {
                 logoEl.style.display = 'block';
                 logoEl.style.width = '100%';
                 logoEl.style.height = '100%';
-                logoEl.style.objectFit = 'contain';
+                logoEl.style.objectFit = 'cover';
                 logoEl.style.borderRadius = '50%';
                 // Remove only text nodes (preserve img element)
                 Array.from(logoContainer.childNodes).forEach(node => {
@@ -9558,7 +9468,8 @@ function renderNavigation() {
         return `<a href="${link.url}" class="mobile-nav-link${isActive ? ' active' : ''}" style="--stagger-index: ${index}">${link.text}</a>`;
     };
 
-    // Note: The H1 tag is used for SEO (as discussed previously)
+    // Note: The H1 tag is used for SEO, except on pages whose hero/header band carries the h1
+    const hasPageTitle = !!document.querySelector('.hero__name, .page-hero__title');
     navContainer.innerHTML = `
     <nav class="top-nav" id="mainNav">
         <!-- Hamburger menu button (mobile only) -->
@@ -9567,9 +9478,9 @@ function renderNavigation() {
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
-        <h1 class="nav-title">
-            <a href="index.html">Košická Miniliga</a>
-        </h1>
+        <${hasPageTitle ? 'div' : 'h1'} class="nav-title">
+            <a href="index.html">Miniliga</a>
+        </${hasPageTitle ? 'div' : 'h1'}>
         <div class="nav-badge" id="navBadge">Aktualizované:<br>22.12.2025</div>
         <!-- Desktop nav links -->
         <div class="nav-links">

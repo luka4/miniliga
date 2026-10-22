@@ -1,0 +1,259 @@
+/* Sport look for the secondary pages: prediction, mystats, myteam, highlights, cookies, 404.
+   Loaded after each page's own stylesheet (body.sport-pages). Tokens come from sport.css. */
+
+/* ---------- Page frame ---------- */
+body.sport-pages .container.page-container { padding-bottom: calc(var(--gutter) * 2); }
+body.sport-pages #mainContainer { width: 96%; max-width: none; box-sizing: border-box; }
+body.sport-pages #page-mystats .container,
+body.sport-pages #mainContainer > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
+body.sport-pages #mainContainer > .stats-grid,
+body.sport-pages #mainContainer > .highlights-bottom-nav { max-width: 1100px; }
+
+/* ---------- Flat: square corners, no resting shadows, no gradients ---------- */
+body.sport-pages :is(div, section, article, button, input, select, textarea, img, a, span, li, ul, table, th, td, canvas, label, form):not(#pageLoader *):not([class*="slider"]):not([class*="switch"]):not([class*="knob"]) {
+  border-radius: 0 !important;
+}
+
+body.sport-pages :is(div, section, article, button, input, select, a, span, li, table, th, td):not(#pageLoader *):not([class*="tooltip"]):not([class*="dropdown"]):not([class*="switch"]):not([class*="slider"]) {
+  box-shadow: none !important; /* taste-skill-ignore */
+  text-shadow: none !important; /* taste-skill-ignore */
+}
+
+/* ---------- Panels ---------- */
+body.sport-pages :is(.prediction-card, .mystats-card, .cookies-card, .history-section, .next-match-card) {
+  background: #fff;
+  border: 2px solid var(--ink) !important;
+  padding: 20px;
+  margin: 0 auto var(--gutter);
+}
+
+body.sport-pages :is(.section-title, .mystats-section-title, .cookies-card h2, .history-title, .next-match-title, .sim-section-title, .sim-section-title-mini, .whatif-preview-title, .h2h-title, .lineup-title, .whatif-scenarios-title, .section-header h2) {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(24px, 2.6vw, 34px);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+body.sport-pages #page-myteam .mystats-section-title::after,
+body.sport-pages .mystats-section-title::after { display: none; }
+
+body.sport-pages :is(.section-subtitle, .welcome-text, .whatif-preview-desc, .sim-section-note, .section-description, .highlights-intro) {
+  color: var(--ink-3);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Inner items: tone step instead of lines */
+body.sport-pages :is(.lineup-card, .core-stat, .record-card, .derived-stat-item, .sim-section, .whatif-preview, .compare-result, .rating-box, .next-match-item, .sim-section-mini, .whatif-scenario, .whatif-scenario-mini, .score-row, .score-row-mini, .team-rating-info, .match-prediction-section, .lineup-player, .compare-match-item, .stat-row, .upset-card, .stat-card:not([data-flip-card])) {
+  background: #f1f5f9;
+  border: 0 !important;
+  color: var(--ink);
+}
+
+body.sport-pages :is(.core-stat--primary) { background: var(--sky); color: var(--ink); }
+body.sport-pages .core-stat--primary :is(.core-stat-value, .core-stat-label, .core-stat-rank, .core-stat-sub) { color: var(--ink); }
+body.sport-pages .core-stat-value,
+body.sport-pages .score-prediction,
+body.sport-pages .record-value,
+body.sport-pages .prediction-score,
+body.sport-pages .whatif-new-rating-value,
+body.sport-pages .whatif-delta-value,
+body.sport-pages .score-value {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+body.sport-pages :is(.core-stat-label, .record-title, .derived-stat-name, .rating-label, .prediction-label, .selector-group label, .player-select-form label, .whatif-opponent-select label) {
+  color: var(--ink-3);
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+/* Result colours: win / draw / loss tones from sport.css */
+body.sport-pages :is(.record-win, .win-text, .diff-up, .positive, .whatif-delta--positive .whatif-delta-value) { color: #15803d !important; }
+body.sport-pages :is(.record-loss, .loss-text, .diff-down, .negative, .whatif-delta--negative .whatif-delta-value) { color: #d62839 !important; }
+body.sport-pages .record-draw { color: #b45309 !important; }
+body.sport-pages :is(.whatif-scenario--win, .whatif-scenario-mini.win) { background: var(--win); }
+body.sport-pages :is(.whatif-scenario--loss, .whatif-scenario-mini.loss) { background: var(--loss); }
+body.sport-pages :is(.form-indicator.win) { background: var(--win); color: var(--ink); }
+body.sport-pages :is(.form-indicator.loss) { background: var(--loss); color: var(--ink); }
+body.sport-pages :is(.form-indicator.draw) { background: var(--draw); color: var(--ink); }
+
+body.sport-pages :is(.score-bar, .score-bar-mini) { background: #fff; }
+body.sport-pages :is(.score-bar-fill, .score-bar-fill-mini) { background: var(--ink) !important; }
+body.sport-pages :is(.score-row--max .score-bar-fill, .score-row-mini--max .score-bar-fill-mini) { background: var(--win) !important; }
+
+/* ---------- Controls ---------- */
+body.sport-pages :is(.pred-btn, .mystats-btn, .highlights-nav-btn, .show-all-matches-btn, .show-all-upcoming-btn, .cookies-btn, .back-link) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 22px 12px;
+  border: 0 !important;
+  background: var(--ink) !important;
+  color: #fff !important;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), background-color 0.2s ease;
+}
+
+body.sport-pages :is(.pred-btn, .mystats-btn, .highlights-nav-btn, .show-all-matches-btn, .show-all-upcoming-btn, .cookies-btn, .back-link):hover:not(:disabled) { background: var(--ink-3) !important; transform: translateY(-3px); }
+body.sport-pages :is(.pred-btn, .mystats-btn, .highlights-nav-btn, .cookies-btn):active { transform: scale(0.98); }
+body.sport-pages :is(.pred-btn, .mystats-btn, .highlights-nav-btn, .cookies-btn, .back-link):focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+body.sport-pages :is(.mystats-btn--secondary, .pred-btn.secondary, .cookies-btn--secondary) { background: var(--ink-2) !important; }
+body.sport-pages :is(.highlights-nav-btn:disabled) { opacity: 0.4; cursor: default; }
+body.sport-pages .page-hero :is(.mystats-btn) { background: var(--sky) !important; color: var(--ink) !important; }
+
+body.sport-pages :is(input[type="text"], input:not([type]), input[type="search"], select, .selector-group input, .compare-form input, .player-select-form input, .whatif-opponent-select input) {
+  padding: 12px;
+  border: 0 !important;
+  background: #f1f5f9 !important;
+  color: var(--ink);
+  font: 500 16px var(--font-sans);
+}
+
+body.sport-pages :is(input, select):focus,
+body.sport-pages :is(input, select):focus-visible { outline: 3px solid var(--ink); outline-offset: 0; }
+
+body.sport-pages .page-hero select { background: #fff !important; min-width: 200px; }
+body.sport-pages .page-hero .highlights-filter-section { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; background: transparent; border: 0; }
+body.sport-pages .page-hero .highlights-filter-section label { color: #fff; font-weight: 600; font-size: 15px; }
+
+body.sport-pages .pred-vs,
+body.sport-pages .sim-vs,
+body.sport-pages .whatif-vs,
+body.sport-pages .sim-vs-mini {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--sky);
+  padding: 6px 10px 4px;
+}
+
+body.sport-pages .status-text { color: var(--ink-3); font-weight: 600; }
+body.sport-pages .status-text.success,
+body.sport-pages .compare-status.ok { color: #15803d; }
+
+/* ---------- Charts ---------- */
+body.sport-pages .chart-container { background: #f1f5f9; border: 0 !important; padding: 14px; }
+body.sport-pages .chart-toggle-btn { background: var(--ink) !important; color: #fff !important; border: 0 !important; font-family: var(--font-display); font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; padding: 9px 12px 7px; }
+body.sport-pages .chart-toggle-btn.is-active { background: var(--sky) !important; color: var(--ink) !important; }
+
+/* ---------- mystats / myteam header ---------- */
+body.sport-pages .mystats-header { background: var(--ink); color: #fff; padding: 20px; margin-bottom: var(--gutter); border: 0 !important; }
+body.sport-pages .mystats-avatar { background: var(--sky) !important; color: var(--ink); font-family: var(--font-display); font-weight: 400; border: 0 !important; }
+body.sport-pages .mystats-name { margin: 0; color: #fff; font-family: var(--font-display); font-weight: 400; font-size: clamp(36px, 6vw, 72px); line-height: 0.95; text-transform: uppercase; letter-spacing: 0.01em; }
+body.sport-pages .mystats-team,
+body.sport-pages .season-teams--mystats { color: rgba(255, 255, 255, 0.85); font-weight: 600; }
+body.sport-pages .mystats-card--welcome { text-align: left; max-width: 640px; margin-left: 0; }
+body.sport-pages .mystats-card--welcome h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 4vw, 48px); text-transform: uppercase; margin: 0 0 8px; color: var(--ink); }
+body.sport-pages .player-select-form { align-items: stretch; }
+
+/* myteam players table */
+body.sport-pages .team-players-table-wrapper { border: 0 !important; background: #fff; }
+body.sport-pages .team-players-table th { background: var(--ink) !important; color: #fff !important; font-family: var(--font-display); font-weight: 400; letter-spacing: 0.05em; border: 0 !important; }
+body.sport-pages .team-players-table td { border: 0 !important; background: #f1f5f9; }
+body.sport-pages .team-players-table tbody tr:nth-child(even) td { background: #fff; }
+body.sport-pages .team-players-table tbody tr:hover td { background: var(--ink) !important; color: #fff; }
+body.sport-pages .team-players-table tbody tr.team-players-divider td { background: var(--sky) !important; color: var(--ink); }
+
+/* history lists (shared with rating modal) */
+body.sport-pages .history-section { padding: 0; }
+body.sport-pages .history-title { background: var(--ink); color: #fff; padding: 16px 16px 12px; margin: 0; }
+body.sport-pages .history-item { background: #f1f5f9; border: 0 !important; margin-top: 4px; }
+body.sport-pages .history-item:nth-child(even) { background: #fff; }
+body.sport-pages #myRecentMatches .score-row { background: transparent; }
+body.sport-pages .score-row:not(.score-row--max):not(.score-row--min) { font-family: var(--font-display); font-weight: 400; }
+
+/* ---------- Highlights ---------- */
+body.sport-pages .section-header { margin: 40px 0 14px; padding: 0; border: 0; background: transparent; }
+body.sport-pages .highlights-filter-sticky { position: static; background: transparent; padding: 0; border: 0; }
+
+body.sport-pages .stats-grid { gap: var(--gutter); }
+body.sport-pages .stat-card--rounds { --card-a: var(--ink); --card-b: var(--ink); }
+body.sport-pages .stat-card--teams { --card-a: var(--sky); --card-b: var(--sky); }
+body.sport-pages .stat-card--matches { --card-a: var(--loss); --card-b: var(--loss); }
+body.sport-pages .stat-card--sets { --card-a: var(--draw); --card-b: var(--draw); }
+body.sport-pages .stat-face { background: var(--card-a) !important; color: #fff; border: 0 !important; }
+body.sport-pages .stat-face::before,
+body.sport-pages .stat-face::after { display: none !important; }
+body.sport-pages :is(.stat-card--teams, .stat-card--matches, .stat-card--sets) .stat-face { color: var(--ink); }
+body.sport-pages .stat-face--back { background: #f1f5f9 !important; color: var(--ink); }
+body.sport-pages .highlights-card-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 2.3vw, 32px); text-transform: uppercase; letter-spacing: 0.01em; }
+body.sport-pages .highlights-card-hint { font-weight: 600; opacity: 0.85; }
+body.sport-pages .highlights-bottom-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin: var(--gutter) auto; }
+
+/* ---------- Cookies ---------- */
+body.sport-pages .cookies-page { max-width: 860px; margin: 0 auto; padding: 0; }
+body.sport-pages .cookies-quick { margin-top: 0; }
+body.sport-pages .cookies-card { margin-top: var(--gutter); }
+body.sport-pages .cookies-card p { color: var(--ink); font-size: 17px; }
+body.sport-pages .cookies-status { background: var(--sky); color: var(--ink); font-weight: 700; padding: 4px 10px; }
+body.sport-pages .cookies-table-wrap { border: 0 !important; }
+body.sport-pages .cookies-table th { background: var(--ink); color: #fff; font-family: var(--font-display); font-weight: 400; letter-spacing: 0.05em; border: 0 !important; }
+body.sport-pages .cookies-table td { background: #f1f5f9; border: 0 !important; }
+body.sport-pages .cookies-table tr:nth-child(even) td { background: #fff; }
+
+/* ---------- 404 ---------- */
+body.sport-pages .error-container { max-width: 760px; margin: 0; padding: 0; text-align: left; }
+body.sport-pages .error-title { margin: 0 0 var(--gutter); font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 5vw, 64px); line-height: 0.95; text-transform: uppercase; color: var(--ink); }
+
+/* ---------- Phone ---------- */
+@media (max-width: 700px) {
+  body.sport-pages :is(.prediction-card, .mystats-card, .cookies-card) { padding: 14px; }
+  body.sport-pages .mystats-header { padding: 14px; }
+  body.sport-pages .page-hero .highlights-filter-section { width: 100%; }
+  body.sport-pages .page-hero select { flex: 1; min-width: 0; }
+}
+
+/* Prediction: keep the cards at the width they have before any result is shown */
+body.sport-pages #page-prediction #mainContainer > *,
+body#page-prediction.sport-pages #mainContainer > * { max-width: 820px; }
+
+/* Highlights: paired lists in two columns */
+body.sport-pages .highlights-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gutter);
+  align-items: start;
+}
+body.sport-pages .highlights-col { min-width: 0; }
+@media (max-width: 800px) {
+  body.sport-pages .highlights-duo { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* Highlights flip cards: calm palette (beats the page's own gradients in home.css) */
+body#page-highlights.sport-pages .stat-card--rounds,
+body#page-highlights.sport-pages .stat-card--teams,
+body#page-highlights.sport-pages .stat-card--matches,
+body#page-highlights.sport-pages .stat-card--sets { --card-b: var(--card-a); }
+body#page-highlights.sport-pages .stat-card--rounds  { --card-a: var(--ink); }
+body#page-highlights.sport-pages .stat-card--teams   { --card-a: var(--ink-2); }
+body#page-highlights.sport-pages .stat-card--matches { --card-a: var(--sky); }
+body#page-highlights.sport-pages .stat-card--sets    { --card-a: #dbe3ee; }
+body#page-highlights.sport-pages :is(.stat-card--rounds, .stat-card--teams) .stat-face--front { color: #fff; }
+body#page-highlights.sport-pages :is(.stat-card--matches, .stat-card--sets) .stat-face--front { color: var(--ink); }
+
+/* Highlights: both upset lists use the same card height */
+body#page-highlights.sport-pages .highlights-col .upset-card {
+  min-height: 176px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

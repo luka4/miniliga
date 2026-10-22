@@ -8,20 +8,21 @@
     <title>Košická Miniliga - Rozpis Zápasov</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/shared.css">
-    <link rel="stylesheet" href="styles/results.css">
+    <link rel="stylesheet" href="styles/shared.css?v=4">
+    <link rel="stylesheet" href="styles/sport.css?v=102">
     <link rel="canonical" href="https://miniliga.sk/schedule.html" />
 </head>
-<body id="page-schedule" class="loading">
+<body id="page-schedule" class="loading sport">
 
-<div id="pageLoader">
+<div id="pageLoader" role="status" aria-live="polite">
     <div class="loader">
-        <div class="scene">
-            <div class="ball"></div>
-            <div class="racket">
-                <div class="blade"></div>
-                <div class="handle"></div>
-            </div>
+        <div class="loader-score" aria-hidden="true">
+            <div class="loader-digit is-a"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+            <div class="loader-colon"></div>
+            <div class="loader-digit is-b"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+        </div>
+        <div class="loader-court" aria-hidden="true">
+            <div class="loader-ball-x"><div class="loader-ball-y"></div></div>
         </div>
         <div class="loading-text">Načítava sa</div>
     </div>
@@ -29,17 +30,20 @@
 <div id="pageContent">
     <div id="mainNavContainer"></div>
 
-    <div class="container" id="mainContainer">
-        <h2>Rozpis Zápasov</h2>
-
-        <div class="results-filter-section">
-            <label for="scheduleTeamFilter">Filtrovať podľa tímu:</label>
-            <input type="text" id="scheduleTeamFilter" list="scheduleTeamsList" placeholder="Začnite písať názov tímu..." autocomplete="off">
-            <datalist id="scheduleTeamsList"></datalist>
-            <button id="applyScheduleFilterBtn" class="results-filter-btn">Filtrovať</button>
-            <button id="clearScheduleFilterBtn" class="results-filter-btn results-filter-btn--clear" style="display: none;">Zrušiť filter</button>
+    <header class="page-hero">
+        <h1 class="page-hero__title">Rozpis</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Rozpis zápasov podľa kôl.</p>
+            <div class="results-filter-section">
+                <label for="scheduleTeamFilter">Tím:</label>
+                <input type="text" id="scheduleTeamFilter" list="scheduleTeamsList" placeholder="Začnite písať názov tímu..." autocomplete="off">
+                <datalist id="scheduleTeamsList"></datalist>
+                <button id="applyScheduleFilterBtn" class="results-filter-btn">Filtrovať</button>
+                <button id="clearScheduleFilterBtn" class="results-filter-btn results-filter-btn--clear" style="display: none;">Zrušiť filter</button>
+            </div>
         </div>
-
+    </header>
+    <div class="container page-container" id="mainContainer">
         <div id="scheduleContainer"></div>
     </div>
 
@@ -78,7 +82,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=1"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=20"></script>
+<script src="script.js?v=1000"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>

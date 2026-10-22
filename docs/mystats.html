@@ -9,20 +9,23 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/shared.css?v=4">
     <link rel="stylesheet" href="styles/mystats.css">
+    <link rel="stylesheet" href="styles/sport.css?v=102">
+    <link rel="stylesheet" href="styles/sport-pages.css?v=201">
     <link rel="canonical" href="https://miniliga.sk/mystats.html" />
 </head>
-<body id="page-mystats" class="loading">
+<body id="page-mystats" class="loading sport sport-pages">
 
-<div id="pageLoader">
+<div id="pageLoader" role="status" aria-live="polite">
     <div class="loader">
-        <div class="scene">
-            <div class="ball"></div>
-            <div class="racket">
-                <div class="blade"></div>
-                <div class="handle"></div>
-            </div>
+        <div class="loader-score" aria-hidden="true">
+            <div class="loader-digit is-a"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+            <div class="loader-colon"></div>
+            <div class="loader-digit is-b"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+        </div>
+        <div class="loader-court" aria-hidden="true">
+            <div class="loader-ball-x"><div class="loader-ball-y"></div></div>
         </div>
         <div class="loading-text">Načítava sa</div>
     </div>
@@ -31,11 +34,17 @@
 <div id="pageContent">
     <div id="mainNavContainer"></div>
 
-    <div class="container" id="mainContainer">
+    <header class="page-hero">
+        <h1 class="page-hero__title">Moje štatistiky</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Rating, forma, porovnania a záznamy vášho hráča.</p>
+        </div>
+    </header>
+
+    <div class="container page-container" id="mainContainer">
         <!-- Player Selection Section (shown when no player selected) -->
         <section id="playerSelectSection" class="mystats-card mystats-card--welcome">
-            <div class="welcome-icon">👤</div>
-            <h2>Moje Štatistiky</h2>
+            <h2>Vyberte hráča</h2>
             <p class="welcome-text">Vyberte si svoje meno a zobrazte personalizované štatistiky, grafy a záznamy.</p>
             <div class="player-select-form">
                 <label for="myPlayerSelect">Vaše meno:</label>
@@ -51,9 +60,8 @@
             <!-- Header with player info -->
             <div class="mystats-header">
                 <div class="mystats-header-left">
-                    <div class="mystats-avatar" id="myStatsAvatar">?</div>
                     <div class="mystats-header-info">
-                        <h1 class="mystats-name" id="myStatsName">-</h1>
+                        <h2 class="mystats-name" id="myStatsName">-</h2>
                         <div class="mystats-team" id="myStatsTeam">-</div>
                         <div class="season-teams season-teams--mystats" id="myStatsSeasonTeams" hidden></div>
                     </div>
@@ -65,7 +73,7 @@
 
             <!-- Core Stats Block -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">📊 Prehľad</h3>
+                <h3 class="mystats-section-title">Prehľad</h3>
                 <div class="core-stats-grid">
                     <div class="core-stat core-stat--primary">
                         <div class="core-stat-value" id="myRating">-</div>
@@ -97,13 +105,13 @@
             </section>
 
             <section class="mystats-card" id="myAchievementsSection" style="display: none;">
-                <h3 class="mystats-section-title">🏅 Úspechy</h3>
+                <h3 class="mystats-section-title">Úspechy</h3>
                 <div class="achievements-grid" id="myAchievementsGrid"></div>
             </section>
 
             <!-- Personal Rating Chart -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">📈 Vývoj Ratingu</h3>
+                <h3 class="mystats-section-title">Vývoj Ratingu</h3>
                 <div class="chart-container chart-container--with-toggle">
                     <button type="button" id="toggleEffectivenessLineBtn" class="chart-toggle-btn" aria-pressed="false" title="Pridať efektivitu do grafu" hidden>Zobraziť efektivitu</button>
                     <canvas id="myRatingChart"></canvas>
@@ -112,7 +120,7 @@
 
             <!-- Compare Section -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">⚔️ Porovnanie</h3>
+                <h3 class="mystats-section-title">Porovnanie</h3>
                 <div class="compare-section">
                     <form id="myCompareForm" class="compare-form">
                         <input type="text" id="myCompareInput" list="myCompareList" placeholder="Porovnať s hráčom..." autocomplete="off">
@@ -133,7 +141,7 @@
 
             <!-- Derived Stats / Radar Chart -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">🎯 Herný Profil</h3>
+                <h3 class="mystats-section-title">Herný Profil</h3>
                 <div class="derived-stats-container">
                     <div class="derived-stats-list" id="myDerivedStatsList"></div>
                     <div class="derived-stats-chart">
@@ -144,22 +152,19 @@
 
             <!-- Records & Achievements -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">🏆 Rekordy a Úspechy</h3>
+                <h3 class="mystats-section-title">Rekordy a Úspechy</h3>
                 <div class="records-grid">
                     <div class="record-card record-card--best">
-                        <div class="record-icon">🥇</div>
                         <div class="record-title">Najlepšia Výhra</div>
                         <div class="record-value" id="myBestWin">-</div>
                         <div class="record-sub" id="myBestWinRating">-</div>
                     </div>
                     <div class="record-card record-card--upset">
-                        <div class="record-icon">💥</div>
                         <div class="record-title">Najväčší Upset</div>
                         <div class="record-value" id="myBiggestUpset">-</div>
                         <div class="record-sub" id="myBiggestUpsetDiff">-</div>
                     </div>
                     <div class="record-card record-card--streak">
-                        <div class="record-icon">🔥</div>
                         <div class="record-title">Najdlhšia Séria Výhier</div>
                         <div class="record-value" id="myLongestStreak">-</div>
                         <div class="record-sub" id="myCurrentStreak">-</div>
@@ -169,19 +174,16 @@
 
             <!-- Upcoming Section -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">📅 Nadchádzajúce</h3>
+                <h3 class="mystats-section-title">Nadchádzajúce</h3>
                 <div id="myUpcomingSection">
-                    <div id="myNextMatch" class="next-match-card">
-                        <div class="next-match-title">Najbližší zápas tímu</div>
-                        <div class="next-match-details" id="myNextMatchDetails">
-                            <span class="no-match">Žiadny plánovaný zápas</span>
-                        </div>
+                    <div class="next-match-details" id="myNextMatchDetails">
+                        <span class="no-match">Žiadny plánovaný zápas</span>
                     </div>
                 </div>
 
                 <!-- Match Simulator Preview -->
                 <div class="whatif-preview">
-                    <h3 class="whatif-preview-title">🎯 Predikcia & Simulátor</h3>
+                    <h3 class="whatif-preview-title">Predikcia & Simulátor</h3>
                     <p class="whatif-preview-desc">Zobrazte pravdepodobnosť výsledkov aj simuláciu zmeny ratingu.</p>
                     
                     <div class="whatif-opponent-select">
@@ -209,13 +211,13 @@
                         
                         <!-- Prediction probabilities -->
                         <div class="sim-section-mini">
-                            <div class="sim-section-title-mini">📊 Pravdepodobnosť výsledkov</div>
+                            <div class="sim-section-title-mini">Pravdepodobnosť výsledkov</div>
                             <div class="score-list score-list--mini" id="myPredictionScoreList"></div>
                         </div>
                         
                         <!-- Rating simulation -->
                         <div class="sim-section-mini">
-                            <div class="sim-section-title-mini">🎯 Simulácia zmeny ratingu</div>
+                            <div class="sim-section-title-mini">Simulácia zmeny ratingu</div>
                             <div class="whatif-grid-mini" id="myWhatIfGrid"></div>
                         </div>
                     </div>
@@ -224,7 +226,7 @@
 
             <!-- Match History (Recent) -->
             <section class="mystats-card">
-                <h3 class="mystats-section-title">📜 Posledné Zápasy</h3>
+                <h3 class="mystats-section-title">Posledné Zápasy</h3>
                 <div id="myRecentMatches"></div>
             </section>
         </div>
@@ -244,7 +246,6 @@
                     <a href="rating.html" class="footer-link">Rating</a>
                     <a href="table.html" class="footer-link">Tabuľka</a>
                     <a href="prediction.html" class="footer-link">Predikcie</a>
-                    <a href="admin.html" class="footer-link" id="adminLink" style="display: none;">Admin</a>
                     <a href="highlights.html" class="footer-link">Zaujímavosti</a>
                 </nav>
             </div>
@@ -265,32 +266,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=1"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=20"></script>
-<script>
-    // Show admin link only for Dmytro LUKACHUK
-    (function() {
-        function checkAndShowAdminLink() {
-            const adminLink = document.getElementById('adminLink');
-            if (!adminLink) return;
-            
-            const selectedPlayer = localStorage.getItem('mystats_player_name');
-            if (selectedPlayer === 'Dmytro LUKACHUK') {
-                adminLink.style.display = '';
-            } else {
-                adminLink.style.display = 'none';
-            }
-        }
-        
-        // Check on page load
-        checkAndShowAdminLink();
-        
-        // Also listen for storage changes (in case player is selected on this page)
-        window.addEventListener('storage', checkAndShowAdminLink);
-        
-        // Check periodically in case player is selected without page reload
-        setInterval(checkAndShowAdminLink, 1000);
-    })();
-</script>
+<script src="script.js?v=1000"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>

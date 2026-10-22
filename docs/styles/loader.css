@@ -1,30 +1,23 @@
-:root {
-    --handle: #7c2d12;
-    --rubber-red: #dc2626;
-    --ball: #ffffff;
-    --ball-outline: rgba(0, 0, 0, 0.25);
-}
+/* Page loader: a rally on a scoreboard. Flat ink field, Anton digits ticking up
+   while a ball crosses the table. Shared by every page; no gradients or shadows. */
 
-/* ===============================
-   Loader overlay
-================================ */
 #pageLoader {
+    --ld-digit: clamp(96px, 24vw, 240px);
+    --ld-ball: clamp(14px, 2.4vw, 22px);
+    --ld-beat: 0.4s;
     position: fixed;
     inset: 0;
+    z-index: 9999;
     display: grid;
     place-items: center;
-    background: transparent;
-    align-content: space-between;
-    z-index: 9999;
+    background: var(--color-primary, #2c3e63);
+    color: #fff;
 }
 
 #pageLoader.hidden {
     display: none;
 }
 
-/* ===============================
-   Hide page while loading
-================================ */
 body.loading {
     overflow: hidden;
 }
@@ -33,99 +26,132 @@ body.loading #pageContent {
     display: none;
 }
 
-/* ===============================
-   Loader layout
-================================ */
 .loader {
+    display: grid;
+    gap: 20px;
+    justify-items: stretch;
+    width: min(88vw, 760px);
+}
+
+/* ---------- Score ---------- */
+.loader-score {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 24px;
+    justify-content: space-between;
+    font-family: var(--font-display, "Anton", "Impact", sans-serif);
+    font-size: var(--ld-digit);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
-/* ===============================
-   Scene
-================================ */
-.scene {
+.loader-digit {
+    display: block;
+    height: 1em;
+    min-width: 1.1em;
+    overflow: hidden;
+    text-align: center;
+}
+
+.loader-digit > span {
+    display: block;
+    animation: loader-tick calc(var(--ld-beat) * 44) steps(11, end) infinite;
+}
+
+.loader-digit > span > i {
+    display: block;
+    height: 1em;
+    font-style: normal;
+}
+
+.loader-digit.is-b > span {
+    animation-delay: calc(var(--ld-beat) * -2);
+}
+
+.loader-colon {
+    width: 0.16em;
+    height: 0.42em;
+    background: var(--color-highlight, #7db8ff);
+}
+
+/* ---------- Table and ball ---------- */
+.loader-court {
     position: relative;
-    width: 160px;
-    height: 160px;
+    height: calc(var(--ld-ball) * 4.6);
 }
 
-/* ===============================
-   Ball
-================================ */
-.ball {
+.loader-court::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 8px;
+    background: var(--ink-2, #405482);
+}
+
+.loader-court::after {
+    content: "";
     position: absolute;
     left: 50%;
-    top: 20px;
-    width: 14px;
-    height: 14px;
-    background: var(--ball);
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--ball-outline);
+    bottom: 0;
+    width: 4px;
+    height: calc(var(--ld-ball) * 1.2);
+    background: var(--color-highlight, #7db8ff);
     transform: translateX(-50%);
-    animation: ball-bounce 1.1s ease-in-out infinite;
 }
 
-/* ===============================
-   Racket
-================================ */
-.racket {
+.loader-ball-x {
     position: absolute;
-    bottom: 10px;
-    left: 50%;
-    width: 56px;
-    height: 72px;
-    transform-origin: bottom center;
-    transform: translateX(-50%) rotate(-15deg);
-    animation: racket-swing 1.1s ease-in-out infinite;
+    left: 0;
+    bottom: 8px;
+    width: 100%;
+    height: 0;
+    animation: loader-rally calc(var(--ld-beat) * 2) linear infinite alternate;
 }
 
-.blade {
-    width: 56px;
-    height: 56px;
-    background: var(--rubber-red);
+.loader-ball-y {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: var(--ld-ball);
+    height: var(--ld-ball);
     border-radius: 50%;
-    box-shadow: inset 0 0 0 4px rgba(220, 38, 38, 0.3);
+    background: #fff;
+    animation: loader-arc calc(var(--ld-beat) * 4) infinite;
 }
 
-.handle {
-    width: 14px;
-    height: 30px;
-    background: var(--handle);
-    margin: -4px auto 0;
-    border-radius: 0 0 6px 6px;
-}
-
-/* ===============================
-   Text
-================================ */
 .loading-text {
-    font-size: 0.95rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text);
-    animation: text-pulse 1.4s ease-in-out infinite;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+    color: var(--color-highlight, #7db8ff);
 }
 
-/* ===============================
-   Animations
-================================ */
-@keyframes ball-bounce {
-    0%   { transform: translate(-50%, 0); }
-    50%  { transform: translate(-50%, 90px); }
-    100% { transform: translate(-50%, 0); }
+@keyframes loader-tick {
+    to { transform: translateY(-11em); }
 }
 
-@keyframes racket-swing {
-    0%   { transform: translateX(-50%) rotate(-18deg); }
-    50%  { transform: translateX(-50%) rotate(10deg); }
-    100% { transform: translateX(-50%) rotate(-18deg); }
+/* the ball travels the track width minus its own size */
+@keyframes loader-rally {
+    from { transform: translateX(0); }
+    to   { transform: translateX(calc(min(88vw, 760px) - var(--ld-ball))); }
 }
 
-@keyframes text-pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
+/* edge (hit) -> table at 75% of the crossing -> next edge; the net is never touched */
+@keyframes loader-arc {
+    0%    { transform: translateY(calc(var(--ld-ball) * -3));   animation-timing-function: cubic-bezier(0.11, 0, 0.5, 0); }
+    37.5% { transform: translateY(0);                           animation-timing-function: cubic-bezier(0.5, 1, 0.89, 1); }
+    50%   { transform: translateY(calc(var(--ld-ball) * -3));   animation-timing-function: cubic-bezier(0.11, 0, 0.5, 0); }
+    87.5% { transform: translateY(0);                           animation-timing-function: cubic-bezier(0.5, 1, 0.89, 1); }
+    100%  { transform: translateY(calc(var(--ld-ball) * -3)); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .loader-digit > span,
+    .loader-ball-x,
+    .loader-ball-y {
+        animation: none;
+    }
+    .loader-ball-x { transform: translateX(calc((min(88vw, 760px) - var(--ld-ball)) / 2)); }
+}

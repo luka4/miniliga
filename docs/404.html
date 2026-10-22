@@ -9,54 +9,22 @@
     <meta name="description" content="Stránka sa nenašla">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="styles/loader.css">
-    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/shared.css?v=4">
+    <link rel="stylesheet" href="styles/sport.css?v=102">
+    <link rel="stylesheet" href="styles/sport-pages.css?v=201">
     <link rel="canonical" href="https://miniliga.sk/404.html" />
-    <style>
-        .error-container {
-            text-align: center;
-            padding: 3rem 1rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .error-code {
-            font-size: 8rem;
-            font-weight: bold;
-            color: #e74c3c;
-            margin: 0;
-            line-height: 1;
-            text-shadow: 3px 3px 0px rgba(0,0,0,0.1);
-        }
-        .error-title {
-            font-size: 2rem;
-            margin: 1rem 0;
-            color: #2c3e50;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 2rem;
-            padding: 0.75rem 2rem;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-        .back-link:hover {
-            background: #2980b9;
-        }
-    </style>
 </head>
-<body id="page-404" class="loading">
+<body id="page-404" class="loading sport sport-pages">
 
-<div id="pageLoader">
+<div id="pageLoader" role="status" aria-live="polite">
     <div class="loader">
-        <div class="scene">
-            <div class="ball"></div>
-            <div class="racket">
-                <div class="blade"></div>
-                <div class="handle"></div>
-            </div>
+        <div class="loader-score" aria-hidden="true">
+            <div class="loader-digit is-a"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+            <div class="loader-colon"></div>
+            <div class="loader-digit is-b"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+        </div>
+        <div class="loader-court" aria-hidden="true">
+            <div class="loader-ball-x"><div class="loader-ball-y"></div></div>
         </div>
         <div class="loading-text">Načítava sa</div>
     </div>
@@ -65,15 +33,17 @@
 <div id="pageContent">
     <div id="mainNavContainer"></div>
 
-    <div class="container" id="mainContainer">
-        <div class="error-container">
-            <h1 class="error-code">404</h1>
-            <h2 class="error-title">Stránka sa nenašla!</h2>
-            <p style="font-size: 1.2rem; color: #7f8c8d; margin-bottom: 2rem;">
-                Táto stránka bola možno odohraná v minulosti, ale teraz už nie je v tabuľke.
-            </p>
+    <header class="page-hero">
+        <h1 class="page-hero__title">404</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Táto stránka bola možno odohraná v minulosti, ale teraz už nie je v tabuľke.</p>
+        </div>
+    </header>
 
-            <a href="index.html" class="back-link">← Späť na domovskú stránku</a>
+    <div class="container page-container" id="mainContainer">
+        <div class="error-container">
+            <h2 class="error-title">Stránka sa nenašla</h2>
+            <a href="index.html" class="back-link">Späť na domovskú stránku</a>
         </div>
     </div>
 
@@ -110,7 +80,7 @@
 
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=20"></script>
+<script src="script.js?v=1000"></script>
 <script src="spinbook-promo.js?v=1"></script>
 </body>
 </html>
