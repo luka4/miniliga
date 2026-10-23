@@ -389,7 +389,7 @@ body:not(.loading) .pulse__tile:nth-child(4) { animation-delay: 0.39s; }
   .duo { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Hero wordmark: single line with the ball-rally intro and the KOŠICKA tag above it */
+/* Hero wordmark: single line with the ball-rally intro and the KOŠICKÁ tag above it */
 
 /* The ball arcs above the word, so only the sides are clipped */
 .hero__mark { overflow-x: clip; overflow-y: visible; position: relative; }
@@ -397,7 +397,7 @@ body:not(.loading) .pulse__tile:nth-child(4) { animation-delay: 0.39s; }
 
 .hero__letter { transform-origin: 50% 100%; }
 
-/* KOŠICKA: a quarter of the wordmark's size, in the accent colour, flush with the M */
+/* KOŠICKÁ: a quarter of the wordmark's size, in the accent colour, flush with the M */
 .hero__kosicka {
   display: block;
   /* tucked into the top of MINILIGA by a few pixels */
