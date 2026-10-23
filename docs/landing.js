@@ -34,7 +34,7 @@
     }
 
     // --- Intro: a ping-pong rally. The ball is hit in from the right for each letter, drives it into place,
-    // and rebounds; the rally speeds up and ends in a smash. Then the whole word KOŠICKA drops in above it. ---
+    // and rebounds; the rally speeds up and ends in a smash. Then the whole word KOŠICKÁ drops in above it. ---
     const wait = anims => Promise.all(anims.map(a => a.finished.catch(() => {})));
 
     // Where the ball rests: in the free lane right after the A, on the baseline of the word
@@ -148,7 +148,7 @@
             });
         });
 
-        // KOŠICKA drops in as one whole word, in the accent colour
+        // KOŠICKÁ drops in as one whole word, in the accent colour
         const tag = mark.querySelector('.hero__kosicka');
         ks.forEach(k => k.classList.add('is-in'));
         tag.animate([
