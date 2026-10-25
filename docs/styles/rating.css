@@ -1716,3 +1716,71 @@ tbody td:nth-child(2) {
 #mainTableWrapper { cursor: grab; }
 #mainTableWrapper.is-dragging { cursor: grabbing; user-select: none; }
 @media screen and (max-width: 768px) { #stickyHScroll { display: none !important; } }
+
+/* ---------- Rating explainer (self-playing animation in the info modal) ---------- */
+#page-rating .explainer { margin: 40px 0 28px; background: var(--ink); color: #fff; }
+.ex-view { position: relative; width: 100%; aspect-ratio: 800 / 420; overflow: hidden; background: var(--ink); }
+.ex-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; font-family: var(--font-sans); }
+.ex-scene { position: absolute; inset: 0; }
+.ex-scene > *, .ex-row, .ex-bar > * { opacity: 0; }
+.ex-scene > .ex-row { opacity: 1; }
+.ex-title, .ex-c, .ex-ball, .ex-table, .ex-net, .ex-line, .ex-bar, .ex-track, .ex-col, .ex-colval, .ex-collab, .ex-legend, .ex-recap, .ex-row { position: absolute; }
+.ex-title { font-family: var(--font-display); font-size: 36px; line-height: 1; text-transform: uppercase; letter-spacing: 0.01em; color: #fff; opacity: 1 !important; }
+.ex-c { left: 0; width: 800px; text-align: center; }
+.ex-hero { font-family: var(--font-display); font-size: 64px; line-height: 1; text-transform: uppercase; }
+.ex-sub { font-size: 24px; font-weight: 600; color: var(--sky); }
+.ex-big { font-family: var(--font-display); font-size: 68px; line-height: 1; }
+.ex-big--s { font-size: 56px; }
+.ex-num { font-family: var(--font-display); font-size: 48px; line-height: 1; }
+.ex-tiny { font-size: 18px; font-weight: 700; letter-spacing: 0.14em; color: var(--sky); }
+.ex-pos { color: #86efac; }
+.ex-neg { color: var(--loss); }
+.ex-ball { width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 34px; color: var(--ink); background: #fff; }
+.ex-ball--s { width: 28px; height: 28px; background: #fff; }
+.ex-table { height: 10px; background: var(--sky); }
+.ex-net { width: 4px; height: 38px; background: #fff; }
+.ex-line { height: 4px; background: #fff; transform-origin: 0 50%; }
+.ex-chip { display: inline-block; padding: 8px 16px; font-size: 20px; font-weight: 700; letter-spacing: 0.04em; background: #fff; color: var(--ink); }
+.ex-chip--sky { background: var(--sky); }
+.ex-chip--loss { background: var(--loss); }
+.ex-chip--green { background: var(--color-success); color: #fff; }
+.ex-bar { height: 56px; background: var(--ink-2); display: flex; }
+.ex-seg { height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-display); font-size: 28px; width: 0; overflow: hidden; white-space: nowrap; }
+.ex-seg b { font-weight: 400; }
+.ex-seg--a { background: var(--sky); color: var(--ink); }
+.ex-seg--b { background: var(--draw); color: var(--ink); }
+.ex-tick { top: 0; width: 3px; height: 56px; background: var(--ink); position: absolute; }
+.ex-formula { font-size: 26px; font-weight: 600; padding: 16px 12px; background: var(--ink-2); }
+.ex-formula sup, .ex-formula sub { font-size: 0.6em; }
+.ex-formula b { color: #fff; background: var(--sky); color: var(--ink); padding: 0 8px; }
+.ex-row { left: 0; width: 800px; display: flex; justify-content: center; align-items: flex-start; gap: 18px; }
+.ex-cell { text-align: center; font-family: var(--font-display); font-size: 40px; line-height: 1.1; min-width: 28px; }
+.ex-cell b { display: block; font-weight: 400; font-size: 44px; }
+.ex-cell i { display: block; font-style: normal; font-family: var(--font-sans); font-size: 18px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sky); }
+.ex-after { font-family: var(--font-display); font-size: 36px; text-align: center; }
+.ex-ab { display: inline-block; width: 40px; height: 40px; line-height: 40px; border-radius: 50%; font-size: 24px; color: var(--ink); text-align: center; vertical-align: 4px; }
+.ex-ab--a { background: var(--sky); } .ex-ab--b { background: var(--draw); }
+.ex-track { height: 36px; background: var(--ink-2); }
+.ex-fill { height: 100%; width: 0; background: #86efac; }
+.ex-col { }
+.ex-colval { text-align: center; font-family: var(--font-display); font-size: 28px; }
+.ex-collab { text-align: center; font-size: 22px; font-weight: 700; color: var(--sky); }
+.ex-legend { left: 90px; right: 90px; display: flex; align-items: center; gap: 22px; }
+.ex-swatch { width: 120px; height: 56px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 32px; }
+.ex-legtxt b { display: block; font-size: 26px; }
+.ex-legtxt span { font-size: 20px; font-weight: 600; color: var(--sky); }
+.ex-recap { left: 70px; right: 40px; display: flex; align-items: center; gap: 20px; font-size: 28px; font-weight: 600; }
+.ex-no { width: 48px; height: 48px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--sky); color: var(--ink); font-family: var(--font-display); font-size: 28px; }
+.ex-recap b { color: var(--draw); }
+
+.ex-caps { position: relative; min-height: 7em; padding: 16px var(--gutter) 8px; font-size: clamp(16px, 2.3vw, 22px); line-height: 1.4; font-weight: 600; background: var(--ink); }
+.ex-capgroup .ex-cap { margin-bottom: 6px; opacity: 0; }
+.ex-bar-ctl { display: flex; align-items: center; gap: 8px; padding: 8px var(--gutter) 12px; background: var(--ink); }
+.ex-btn { width: 40px; height: 40px; border: 0; background: var(--sky); color: var(--ink); font-size: 18px; font-weight: 700; cursor: pointer; }
+.ex-btn:hover { background: #fff; }
+.ex-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.ex-progress { flex: 1; height: 12px; background: var(--ink-2); cursor: pointer; }
+.ex-progress__fill { height: 100%; width: 0; background: var(--sky); }
+.ex-step { min-width: 44px; text-align: right; font-size: 16px; font-weight: 700; color: var(--sky); }
+
+@media (max-width: 640px) { .ex-caps { min-height: 9.5em; } }
