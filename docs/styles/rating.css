@@ -1718,7 +1718,7 @@ tbody td:nth-child(2) {
 @media screen and (max-width: 768px) { #stickyHScroll { display: none !important; } }
 
 /* ---------- Rating explainer (self-playing animation in the info modal) ---------- */
-#page-rating .explainer { margin: 40px 0 28px; background: var(--ink); color: #fff; }
+#page-rating .explainer { margin: 0 0 28px; background: var(--ink); color: #fff; }
 .ex-view { position: relative; width: 100%; aspect-ratio: 800 / 420; overflow: hidden; background: var(--ink); }
 .ex-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; font-family: var(--font-sans); }
 .ex-scene { position: absolute; inset: 0; }
