@@ -1784,3 +1784,13 @@ tbody td:nth-child(2) {
 .ex-step { min-width: 44px; text-align: right; font-size: 16px; font-weight: 700; color: var(--sky); }
 
 @media (max-width: 640px) { .ex-caps { min-height: 9.5em; } }
+
+/* Rating journey graph */
+.ex-gl { position: absolute; font-size: 16px; font-weight: 700; color: var(--sky); white-space: nowrap; opacity: 0; }
+.ex-tag { position: absolute; text-align: center; font-family: var(--font-display); font-size: 24px; line-height: 1; opacity: 0; }
+.ex-kb { position: absolute; background: var(--draw); opacity: 0; }
+.ex-ml { position: absolute; text-align: center; font-family: var(--font-display); font-size: 22px; line-height: 1.1; opacity: 0; }
+.ex-ml i { display: block; font-style: normal; font-family: var(--font-sans); font-size: 14px; font-weight: 700; color: var(--sky); }
+.ex-chip--red { background: var(--color-danger); color: #fff; }
+.ex-scene > svg { opacity: 1; }
+.ex-ml .ex-kt { color: var(--draw); }
