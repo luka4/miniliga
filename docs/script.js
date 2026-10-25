@@ -5592,10 +5592,16 @@ function renderRatingPage() {
     window.onclick = (e) => {
         if (e.target == playerModal) closePlayerModal();
         const im = document.getElementById("infoModal");
-        if (im && e.target == im) im.style.display = "none";
+        if (im && e.target == im) closeInfoModal();
     };
-    window.openInfoModal = () => document.getElementById("infoModal").style.display = "flex";
-    window.closeInfoModal = () => document.getElementById("infoModal").style.display = "none";
+    window.openInfoModal = () => {
+        document.getElementById("infoModal").style.display = "flex";
+        if (window.RatingExplainer) window.RatingExplainer.restart();
+    };
+    window.closeInfoModal = () => {
+        document.getElementById("infoModal").style.display = "none";
+        if (window.RatingExplainer) window.RatingExplainer.stop();
+    };
     populateCompareOptions();
     if (compareForm) {
         compareForm.addEventListener('submit', (e) => {
