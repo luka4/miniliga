@@ -79,7 +79,7 @@
             mk(root, 'ex-table', '', { left: '210px', top: '196px', width: '380px' });
             mk(root, 'ex-net', '', { left: '398px', top: '168px' });
             const b = mk(root, 'ex-ball ex-ball--s', '', { left: '364px' });
-            const t = center(root, 'ex-hero', 'AKO FUNGUJE<br>RATING?', 236);
+            const t = center(root, 'ex-hero', 'ELO RATING<br>KROK ZA KROKOM', 236);
             const s = center(root, 'ex-sub', 'Upravený ELO systém pre stolný tenis', 372);
             return (lt) => {
                 const bounce = Math.abs(Math.sin(Math.PI * lt / 0.9));
