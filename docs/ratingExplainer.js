@@ -254,32 +254,75 @@
         });
     })();
 
-    // 7 - K factor
-    SCENES.push({
-        caps: [[1.0, 'K určuje, ako veľmi môže jeden zápas pohnúť ratingom.'], [4.5, 'Prvé zápasy: K = 30, rating sa rýchlo ustáli.'], [8.5, 'Od 6. zápasu je K = 10 a rating je stabilný.']],
-        dur: 12,
-        build(root) {
-            title(root, '7 · K-faktor');
-            const bars = K_STAGES.map((k, i) => {
-                const x = 80 + i * 108;
-                const h = k * 6;
-                const col = mk(root, 'ex-col', '', { left: x + 'px', top: '320px', width: '84px', height: '0px', background: i === 5 ? COLORS.draw : COLORS.sky });
-                const val = mk(root, 'ex-colval', 'K ' + k, { left: x + 'px', width: '84px', top: (320 - h - 40) + 'px' });
-                const lab = mk(root, 'ex-collab', i === 5 ? '6.+' : (i + 1) + '.', { left: x + 'px', width: '84px', top: '330px' });
-                return { col, val, lab, h, i };
-            });
-            const ax = center(root, 'ex-tiny', 'ZÁPAS HRÁČA', 376);
-            return (lt) => {
-                bars.forEach((o) => {
-                    const p = prog(lt, 1.5 + o.i * 0.7, 0.7, easeOutCubic);
-                    o.col.style.height = (o.h * p) + 'px';
-                    o.col.style.top = (320 - o.h * p) + 'px';
-                    o.col.style.opacity = 1; o.val.style.opacity = p; o.lab.style.opacity = prog(lt, 1.0, 0.5);
-                });
-                appear(ax, lt, 1.0);
-            };
-        }
-    });
+    // 7 - rating journey graph (also shows the K-factor shrinking)
+    (function () {
+        const plan = [[100, 3, 1], [140, 2, 3], [120, 3, 0], [170, 3, 2], [150, 1, 3], [160, 3, 1], [140, 3, 2], [150, 3, 0]];
+        const pts = [{ r: 100 }];
+        plan.forEach((m, i) => {
+            const prev = pts[i].r, k = K_STAGES[Math.min(i, K_STAGES.length - 1)];
+            const n = m[1] + m[2], d = k * (m[1] - expected(prev, m[0], n));
+            pts.push({ r: prev + d, d, k, opp: m[0], a: m[1], b: m[2], win: m[1] > m[2] });
+        });
+        const T0 = 2.4, STEP = 3.0;
+        const at = (i) => T0 + (i - 1) * STEP; // time match i (1-based) starts
+        const m2 = pts[2], m4 = pts[4];
+        SCENES.push({
+            caps: [
+                [0.8, 'Graf ukazuje rating jedného nového hráča po každom zápase.'],
+                [at(1) + 0.8, `1. zápas: výhra ${pts[1].a}:${pts[1].b}, rating ${fmt(100)} → ${fmt(pts[1].r)} (${signed(Math.round(pts[1].d))}).`],
+                [at(2) + 0.8, `2. zápas: prehra ${m2.a}:${m2.b} so silnejším súperom, a predsa ${signed(Math.round(m2.d))}.`],
+                [at(4) + 0.8, `Výhra nad silnejším súperom (${m4.opp}) prinesie veľký skok: ${signed(Math.round(m4.d))}.`],
+                [at(6) + 0.8, 'Kroky sú čoraz menšie: K klesá z 30 na 10.'],
+                [at(8) + 1.0, 'Po 8 zápasoch je rating stále červený (menej ako 11 zápasov).']
+            ],
+            dur: at(8) + 5.5,
+            build(root) {
+                title(root, '7 · Vývoj ratingu');
+                const X0 = 100, X1 = 740, YT = 100, YB = 288;
+                const lo = Math.min(...pts.map((p) => p.r)) - 8, hi = Math.max(...pts.map((p) => p.r)) + 8;
+                const X = (i) => X0 + (X1 - X0) * i / plan.length;
+                const Y = (r) => YB - (YB - YT) * (r - lo) / (hi - lo);
+                const NS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(NS, 'svg');
+                svg.setAttribute('width', W); svg.setAttribute('height', H);
+                svg.style.cssText = 'position:absolute;left:0;top:0;overflow:visible';
+                root.appendChild(svg);
+                const sv = (name, attrs) => {
+                    const e = document.createElementNS(NS, name);
+                    Object.keys(attrs).forEach((k) => e.setAttribute(k, attrs[k]));
+                    svg.appendChild(e); return e;
+                };
+                const yBase = Y(100);
+                sv('line', { x1: X0 - 10, x2: X1 + 10, y1: yBase, y2: yBase, stroke: COLORS.sky, 'stroke-width': 2, 'stroke-dasharray': '6 6', opacity: 0.8 });
+                sv('line', { x1: X0 - 10, x2: X0 - 10, y1: YT - 10, y2: YB + 6, stroke: COLORS.ink2, 'stroke-width': 2 });
+                const baseLab = mk(root, 'ex-gl', 'štart 100', { left: '8px', top: (yBase - 11) + 'px' });
+                const segs = pts.slice(1).map((p, i) => sv('line', { x1: X(i), y1: Y(pts[i].r), x2: X(i), y2: Y(pts[i].r), stroke: '#fff', 'stroke-width': 4, 'stroke-linecap': 'butt' }));
+                const dots = pts.map((p, i) => sv('circle', { cx: X(i), cy: Y(p.r), r: 8, fill: i === 0 ? COLORS.sky : (p.win ? COLORS.sky : COLORS.loss), stroke: COLORS.ink, 'stroke-width': 3, opacity: 0 }));
+                const tags = pts.slice(1).map((p, i) => mk(root, 'ex-tag ' + (p.d >= 0 ? 'ex-pos' : 'ex-neg'), `${signed(Math.round(p.d))}`, { left: (X(i + 1) - 30) + 'px', top: (Y(p.r) + (p.d >= 0 ? -42 : 14)) + 'px', width: '60px' }));
+                const ks = pts.slice(1).map((p, i) => mk(root, 'ex-kb', '', { left: (X(i + 1) - 24) + 'px', top: '304px', width: '48px', height: (4 + p.k * 0.8) + 'px' }));
+                const labs = pts.slice(1).map((p, i) => mk(root, 'ex-ml', `${p.a}:${p.b}<i>vs ${p.opp}</i><i class="ex-kt">K ${p.k}</i>`, { left: (X(i + 1) - 36) + 'px', top: '338px', width: '72px' }));
+                const ax = mk(root, 'ex-gl', 'zápas →', { left: '8px', top: '350px' });
+                const end = center(root, 'ex-chip-wrap', '<span class="ex-chip ex-chip--red">červená: menej ako 11 zápasov</span>', 0, { top: '26px', left: '400px', width: '370px', textAlign: 'right' });
+                return (lt) => {
+                    appear(baseLab, lt, 0.6); appear(ax, lt, 1.2);
+                    dots[0].setAttribute('opacity', prog(lt, 0.8, 0.5));
+                    pts.slice(1).forEach((p, j) => {
+                        const i = j + 1, s = at(i);
+                        const g = prog(lt, s, 1.1, easeInOutCubic);
+                        const x = X(j) + (X(i) - X(j)) * g, y = Y(pts[j].r) + (Y(p.r) - Y(pts[j].r)) * g;
+                        segs[j].setAttribute('x2', x); segs[j].setAttribute('y2', y);
+                        dots[i].setAttribute('opacity', prog(lt, s + 0.9, 0.3));
+                        const col = i === plan.length && lt > at(plan.length) + 1.2 ? COLORS.red : (p.win ? COLORS.sky : COLORS.loss);
+                        dots[i].setAttribute('fill', col);
+                        appear(tags[j], lt, s + 1.0, 0.5, 8);
+                        appear(ks[j], lt, s + 0.2, 0.5, 6);
+                        appear(labs[j], lt, s + 0.2, 0.5, 6);
+                    });
+                    appear(end, lt, at(plan.length) + 1.4);
+                };
+            }
+        });
+    })();
 
     // 8 - stability colours
     SCENES.push({
@@ -387,7 +430,13 @@
             const fade = Math.min(prog(lt, 0, 0.5), 1 - prog(lt, s.dur - 0.5, 0.5));
             s.root.style.opacity = i === SCENES.length - 1 ? prog(lt, 0, 0.5) : fade;
             s.update(lt);
-            s.caps.forEach((c, j) => appear(s.capEls[j], lt, c[0], 0.6, 8));
+            // only the latest three captions stay on screen so the block keeps a fixed height
+            let shown = -1;
+            s.caps.forEach((c, j) => { if (lt >= c[0]) shown = j; });
+            s.caps.forEach((c, j) => {
+                s.capEls[j].style.display = j < shown - 2 ? 'none' : '';
+                appear(s.capEls[j], lt, c[0], 0.6, 8);
+            });
         });
         lastSceneIdx = idx;
         fillEl.style.width = (t / TOTAL * 100) + '%';
