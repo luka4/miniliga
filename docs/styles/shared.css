@@ -1182,7 +1182,7 @@ a {
 
 .game-player-meta .diff-up { color: var(--color-success); }
 .game-player-meta .diff-down { color: var(--color-danger); }
-.game-player-meta .diff-neu { color: var(--color-muted-2); }
+.game-player-meta .diff-neu { color: var(--draw, #f3cf5f); }
 
 .game-score {
   font-weight: 900;

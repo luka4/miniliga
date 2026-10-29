@@ -3396,7 +3396,7 @@ function buildGameNamesHtml(g, sA, sB, playersData) {
     const splitNames = (str) => String(str || '').split('/').map(n => n.trim()).filter(Boolean);
     const diffHtml = (delta) => {
         if (!Number.isFinite(delta)) return '';
-        if (Math.abs(delta) < 0.01) return '<span class="diff-val diff-neu">-</span>';
+        if (Math.abs(delta) < 0.01) return '<span class="diff-val diff-neu">=0.00</span>';
         return `<span class="diff-val ${delta > 0 ? 'diff-up' : 'diff-down'}">${delta > 0 ? '▲' : '▼'}${Math.abs(delta).toFixed(2)}</span>`;
     };
     const isDoubles = g.doubles === true || g.doubles === 'true';
@@ -4745,7 +4745,7 @@ function renderRatingPage() {
                 }
                 const delta = p.latestRoundPoints;
                 if (Math.abs(delta) < 0.01) {
-                    return `<span class="diff-val diff-neu">-</span>`;
+                    return `<span class="diff-val diff-neu">=0.00</span>`;
                 }
                 const className = delta > 0 ? 'diff-up' : 'diff-down';
                 const symbol = delta > 0 ? '▲' : '▼';
@@ -5341,7 +5341,7 @@ function renderRatingPage() {
     const renderHistory = (p, players) => {
         const container = document.getElementById('historyContainer');
         const getDiffHtml = (delta) => {
-            if (Math.abs(delta) < 0.01) return `<span class="diff-val diff-neu">-</span>`;
+            if (Math.abs(delta) < 0.01) return `<span class="diff-val diff-neu">=0.00</span>`;
             return `<span class="diff-val ${delta > 0 ? 'diff-up' : 'diff-down'}">${delta > 0 ? '▲' : '▼'}${Math.abs(delta).toFixed(2)}</span>`;
         };
 
@@ -6784,7 +6784,7 @@ function renderMyStatsPage() {
         if (!container) return;
 
         const getDiffHtml = (delta) => {
-            if (Math.abs(delta) < 0.01) return `<span class="diff-val diff-neu">-</span>`;
+            if (Math.abs(delta) < 0.01) return `<span class="diff-val diff-neu">=0.00</span>`;
             return `<span class="diff-val ${delta > 0 ? 'diff-up' : 'diff-down'}">${delta > 0 ? '▲' : '▼'}${Math.abs(delta).toFixed(2)}</span>`;
         };
 

@@ -1011,7 +1011,7 @@
 }
 
 .diff-neu {
-  color: var(--color-muted-2);
+  color: var(--draw, #f3cf5f);
 }
 
 .doubles-badge {
