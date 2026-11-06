@@ -212,6 +212,15 @@ const ACHIEVEMENT_DEFINITIONS = {
             {rank: 2, tier: 'silver', title: 'Top 2 rating'},
             {rank: 3, tier: 'bronze', title: 'Top 3 rating'}
         ]
+    },
+    mostEffective: {
+        id: 'mostEffective',
+        name: 'Najefektívnejší hráč kola',
+        icon: 'media/badges/badge-most-effective.png',
+        sortOrder: 7,
+        tiers: [
+            {rank: 1, tier: 'gold', title: 'Najefektívnejší hráč kola'}
+        ]
     }
 };
 
@@ -439,6 +448,49 @@ function buildSilentKillerAchievements(roundInfo) {
     });
 }
 
+// One badge per round: the player with the highest effectiveness (performance rating) in the round.
+// Ties are broken by more sets played, then by name, so exactly one player gets it.
+function buildMostEffectiveAchievements(roundInfo) {
+    const badgeDef = ACHIEVEMENT_DEFINITIONS.mostEffective;
+    const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
+    const {players} = processData(roundInfo.id);
+    const countSets = (p) => (p.latestRoundEffectivenessEntries || []).reduce((sum, e) => sum + (e.totalSets || 0), 0);
+    const best = Object.values(players)
+        .filter(p => Number.isFinite(p.latestRoundEffectiveness))
+        .sort((a, b) => {
+            if (a.latestRoundEffectiveness !== b.latestRoundEffectiveness) return b.latestRoundEffectiveness - a.latestRoundEffectiveness;
+            const setsDiff = countSets(b) - countSets(a);
+            if (setsDiff !== 0) return setsDiff;
+            return a.name.localeCompare(b.name, 'sk', {sensitivity: 'base'});
+        })[0];
+    if (!best) return [];
+
+    const entries = best.latestRoundEffectivenessEntries || [];
+    const setsWon = entries.reduce((sum, e) => sum + (e.scoreOwn || 0), 0);
+    const setsTotal = countSets(best);
+    const tierInfo = badgeDef.tiers[0];
+    return [{
+        type: badgeDef.id,
+        badgeName: badgeDef.name,
+        icon: badgeDef.icon,
+        tier: tierInfo.tier,
+        rank: tierInfo.rank,
+        sortOrder: badgeDef.sortOrder,
+        title: tierInfo.title,
+        roundId: roundInfo.id,
+        roundSortValue: roundInfo.roundSortValue,
+        seasonOrder: roundInfo.seasonOrder,
+        playerName: best.name,
+        team: best.team || 'N/A',
+        effectiveness: best.latestRoundEffectiveness,
+        detailLines: [
+            `${tierInfo.title} v ${roundLabel}.`,
+            best.name,
+            `Efektivita: ${best.latestRoundEffectiveness.toFixed(1)} (sety ${setsWon}:${setsTotal - setsWon})`
+        ]
+    }];
+}
+
 // `player.history` and `player.matchDetails` are final once processData has run and are shared
 // by every processData(roundId) result, so lookups that achievements repeat for every round
 // are parsed / indexed once per object.
@@ -603,6 +655,7 @@ function getLeagueAchievementsByPlayer() {
             ...buildMarathonGuyAchievements(roundInfo),
             ...buildMrThreeZeroAchievements(roundInfo),
             ...buildSilentKillerAchievements(roundInfo),
+            ...buildMostEffectiveAchievements(roundInfo),
             ...(ENABLE_TOP_OF_WORLD_BADGES ? buildTopOfWorldAchievements(roundInfo, allPlayers) : [])
         ];
         roundBadges.forEach(badge => {
