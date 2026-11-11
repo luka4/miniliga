@@ -2,6 +2,7 @@
 // Scrapes autrin.sk (Miniliga) and FILLS GAPS in one season of docs/data/matches.json: a team match is only
 // written when matches.json has no real rows for it yet (missing, or only WO/WO placeholder rows).
 // Existing rows with real data are never modified; placeholders follow autrin's date/time/place.
+// Placeholders for a pairing autrin no longer lists in that round (e.g. moved with home/away swapped) are removed.
 // Usage: node crawl.mjs [--out docs/data/matches.json] [--rocnik 4] [--season "JESEŇ 2026"] [--notify-out played.json]
 // Writes nothing (exit 1) when a safety check fails, so a failed run keeps the last good data.
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
@@ -48,6 +49,7 @@ async function main() {
   const filled = [];
   const played = []; // team matches that got real results in this run (for notifications)
   const teamsSeen = new Set();
+  const listed = new Set(); // match keys autrin lists this run
   for (const [i, id] of roundIds.entries()) {
     const round = `${i + 1} kolo`;
     for (const tm of parseRound(await get(`${BASE}&kola_zobr=1&zobr_kolo_id=${id}`))) {
@@ -58,6 +60,7 @@ async function main() {
         ...(doubles ? { doubles: true } : {}), date: tm.date, location: location(tm.location), season: SEASON, group: '',
       });
       const key = `${round}|${ta}|${tb}`;
+      listed.add(key);
       if (existing.get(key)) continue; // already filled: leave untouched
       const rows = [];
       const games = tm.score && tm.id ? parseProtocol(await get(`${BASE}&zapis_zobr=1&zapas_zobr_id=${tm.id}`)) : [];
@@ -84,6 +87,28 @@ async function main() {
     }
   }
   if (teamsSeen.size !== EXPECTED_TEAMS) throw new Error(`Expected ${EXPECTED_TEAMS} teams, found ${teamsSeen.size}`);
+
+  // Stale placeholders: WO/WO rows whose round|home|away autrin no longer lists (the match was rescheduled,
+  // e.g. with home/away swapped and a new place). Rows with real data are never removed, only reported.
+  const isPlaceholder = (r) => r.player_a === 'WO' && r.player_b === 'WO';
+  const stale = new Set();
+  for (const r of old) {
+    const k = mkey(r);
+    if (listed.has(k) || stale.has(k)) continue;
+    if (old.some((x) => mkey(x) === k && !isPlaceholder(x))) {
+      filled.push(`WARN ${r.round} ${r.player_a_team} - ${r.player_b_team}: has results but autrin does not list it; kept`);
+      stale.add(k); // report once
+      continue;
+    }
+    stale.add(k);
+    // the swapped pairing takes over this position when it is a new placeholder/fill
+    const swapped = `${r.round}|${r.player_b_team}|${r.player_a_team}`;
+    const moved = fills.has(swapped) && !old.some((x) => mkey(x) === swapped) ? swapped : null;
+    filled.push(`removed stale placeholder: ${r.round} ${r.player_a_team} - ${r.player_b_team} (${r.date}, ${r.location})` +
+      (moved ? ' -> replaced by swapped home/away fixture' : ''));
+    if (moved) fills.set(k, fills.get(moved)), fills.delete(moved); // emitted at this row's position below
+    else fills.set(k, []); // just dropped
+  }
 
   // Merge in place: a fill replaces the match's existing placeholder rows at their position;
   // matches not in the file yet go after the last row of their round.
