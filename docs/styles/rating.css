@@ -1796,5 +1796,22 @@ tbody td:nth-child(2) {
 .ex-ml .ex-kt { color: var(--draw); }
 
 /* Player modal: season-scope toggle under the header */
-#page-rating .modal-season-toggle { display: flex; width: fit-content; margin: 4px auto 16px; }
+/* Sticky bar: pins the toggle to the top while scrolling, same height as the close button (which stays above it) */
+#page-rating .modal-season-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  flex-shrink: 0;
+  margin: 0 calc(var(--gutter) * -1) 12px;
+  padding: 0 56px;
+  background: #fff;
+}
+@media screen and (max-width: 768px) {
+  #page-rating .modal-season-bar { margin-left: -16px; margin-right: -16px; }
+}
+#page-rating .modal-season-toggle { display: flex; width: fit-content; }
 #page-rating .modal-season-toggle .match-details-toggle__text { font-size: 14px; font-weight: 600; }

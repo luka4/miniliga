@@ -5333,6 +5333,8 @@ function renderRatingPage() {
         document.getElementById('currentRatingVal').innerText = p.rating.toFixed(2);
 
         playerModal.style.display = "flex";
+        const modalContent = playerModal.querySelector('.modal-content');
+        if (modalContent) modalContent.scrollTop = 0;
         // Defer chart renders slightly to allow modal layout to settle (fixes zero-size canvas on reload with ?player=)
         setTimeout(() => {
             renderLineChart(p, comparePlayer);
