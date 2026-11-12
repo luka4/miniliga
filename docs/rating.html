@@ -28,8 +28,8 @@
     <link rel="preload" href="fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="styles/fonts.css?v=1">
     <link rel="stylesheet" href="styles/shared.css?v=8">
-    <link rel="stylesheet" href="styles/rating.css?v=307">
-    <link rel="stylesheet" href="styles/sport.css?v=102">
+    <link rel="stylesheet" href="styles/rating.css?v=309">
+    <link rel="stylesheet" href="styles/sport.css?v=103">
     <link rel="canonical" href="https://miniliga.sk/rating.html" />
 </head>
 <body id="page-rating" class="loading sport">
@@ -100,6 +100,11 @@
         <div class="modal-content">
             <span class="close-btn" onclick="closePlayerModal()">&times;</span>
             <div id="selectedPlayerHeader"><div class="player-header-name" id="headerName"></div><div class="player-header-team" id="headerTeam"></div><div class="season-teams" id="headerSeasonTeams" hidden></div><div class="player-header-logo" id="headerTeamLogoWrapper"><img id="headerTeamLogo" alt="Team logo"></div></div>
+            <label class="match-details-toggle modal-season-toggle" title="Rating zostáva celkový, odznaky, highlighty, štatistiky a zápasy sa zobrazia len z aktuálnej sezóny">
+                <input type="checkbox" id="modalSeasonOnlyToggle">
+                <span class="match-details-toggle__slider"></span>
+                <span class="match-details-toggle__text">Len aktuálna sezóna</span>
+            </label>
             <div id="playerAchievementsSection" style="display: none;">
                 <div class="pie-row-title"><span>Úspechy</span></div>
                 <div class="achievements-grid achievements-grid--modal" id="playerAchievementsGrid"></div>
@@ -190,7 +195,7 @@
                         <li><b style="color: var(--color-danger);">Červená (0-10 zápasov):</b> <b>Nováčik / Dočasný.</b> Hráč odohral málo zápasov, hodnota sa môže rýchlo meniť a nemusí plne odrážať jeho úroveň.</li>
                         <li><b style="color: var(--color-warning);">Oranžová (11-20 zápasov):</b> <b>Rozvíjajúci sa.</b> Presnosť ratingu sa zvyšuje.</li>
                         <li><b style="color: var(--color-success);">Zelená (21+ zápasov):</b> <b>Stabilný.</b> Hráč odohral dostatok zápasov, rating je štatisticky presný.</li>
-                        <li><b style="color: var(--color-muted, #9ca3af);">Sivá (neodohral zápas v aktuálnej sezóne):</b> <b>Neaktívny.</b> Hráč je v poradí zaradený pod všetkých ostatných a nemôže získať odznak „Top of World“, kým neodohrá aspoň jeden zápas v sezóne (odznak môže získať najskôr po kole, v ktorom prvýkrát nastúpil).</li>
+                        <li><b style="color: var(--color-muted, #9ca3af);">Sivá (neaktívny):</b> <b>Neaktívny.</b> Hráč v aktuálnej sezóne ešte neodohral zápas alebo nehral v posledných 5 odohraných kolách. Je v poradí zaradený pod všetkých ostatných a nemôže získať odznak „Na vrchole sveta“. Rating sa mu nemení a aktívnym sa stáva hneď po ďalšom odohranom zápase. Odznak sa posudzuje ku každému kolu zvlášť, takže už získané odznaky ostávajú.</li>
                     </ul>
                 </div>
 
@@ -262,7 +267,7 @@
 <script src="googleSheetsLoader.js?v=3"></script>
 <script src="seasonRosters.js?v=2"></script>
 <script src="matchData.js?v=8"></script>
-<script src="script.js?v=1009"></script>
+<script src="script.js?v=1011"></script>
 <script src="searchSuggest.js?v=1"></script>
 <script src="ratingExplainer.js?v=6"></script>
 <script src="spinbook-promo.js?v=1"></script>

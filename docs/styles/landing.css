@@ -24,6 +24,9 @@
   justify-content: space-between;
   gap: 24px;
   padding: 8px 0;
+  /* above the wordmark: its glyph boxes overflow downward and would swallow clicks on the autrin.sk link */
+  position: relative;
+  z-index: 3;
 }
 
 .hero__intro { max-width: 52ch; }

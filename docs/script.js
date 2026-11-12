@@ -6,6 +6,9 @@
 const INITIAL_RATING = 100;
 const INITIAL_RATING_4_LIGA = 150;
 const K_FACTOR_STAGES = {1: 30, 2: 26, 3: 22, 4: 18, 5: 14, default: 10};
+// A player who has not played in this many consecutive played rounds of the current season is inactive
+// (grey, sorted last in the rating table, not eligible for the "Top of World" badge).
+const INACTIVE_AFTER_ROUNDS = 5;
 const PERFORMANCE_SCORE_EPSILON = 0.02;
 const PERFORMANCE_PRIOR_SETS = 6;
 
@@ -565,12 +568,47 @@ function getCurrentPlayedSeason() {
     return played.length ? (played[played.length - 1].season || null) : null;
 }
 
-// True when the player has at least one match in `season` (optionally only up to and including `maxRoundOrder`).
-function hasPlayedInSeason(player, season, maxRoundOrder = null) {
-    if (!player || !Array.isArray(player.matchDetails)) return false;
-    const firstRoundOrder = getMatchDetailsIndex(player.matchDetails).firstRoundOrderBySeason.get(season || null);
-    if (firstRoundOrder === undefined) return false;
-    return maxRoundOrder === null || firstRoundOrder <= maxRoundOrder;
+// Sorted distinct round orders of `season` that have at least one played match.
+// Rebuilt if `matchResults` is replaced.
+let playedRoundOrdersIndex = null;
+function getPlayedRoundOrders(season) {
+    if (!playedRoundOrdersIndex || playedRoundOrdersIndex.source !== matchResults) {
+        const bySeason = new Map();
+        (matchResults || []).forEach(m => {
+            if (!isPlayedMatch(m)) return;
+            const key = m.season || null;
+            if (!bySeason.has(key)) bySeason.set(key, new Set());
+            bySeason.get(key).add(getRoundOrderFromStr(m.round));
+        });
+        const sorted = new Map();
+        bySeason.forEach((set, key) => sorted.set(key, [...set].sort((a, b) => a - b)));
+        playedRoundOrdersIndex = {source: matchResults, bySeason: sorted};
+    }
+    return playedRoundOrdersIndex.bySeason.get(season || null) || [];
+}
+
+// Activity as of round `maxRoundOrder` of `season` (null = latest played round).
+// Active = played in this season AND in at least one of its last INACTIVE_AFTER_ROUNDS played rounds.
+// `roundsSince` = played rounds of the season after the player's last one (null if not played this season).
+function getPlayerActivity(player, season, maxRoundOrder = null) {
+    const rounds = getPlayedRoundOrders(season).filter(o => maxRoundOrder === null || o <= maxRoundOrder);
+    let lastOrder = null;
+    if (player && Array.isArray(player.matchDetails)) {
+        getMatchDetailsIndex(player.matchDetails).byRound.forEach(mds => {
+            const md = mds[0];
+            if ((md.season || null) !== (season || null)) return;
+            const order = getRoundOrderFromStr(md.round);
+            if (maxRoundOrder !== null && order > maxRoundOrder) return;
+            if (lastOrder === null || order > lastOrder) lastOrder = order;
+        });
+    }
+    if (lastOrder === null) return {active: false, roundsSince: null};
+    const roundsSince = rounds.filter(o => o > lastOrder).length;
+    return {active: roundsSince < INACTIVE_AFTER_ROUNDS, roundsSince};
+}
+
+function isActiveAtRound(player, season, maxRoundOrder = null) {
+    return getPlayerActivity(player, season, maxRoundOrder).active;
 }
 
 // All matches (played or not) grouped by round id. Achievements look at every round,
@@ -600,9 +638,9 @@ function isRoundFullyPlayedForBadges(roundId) {
 function buildTopOfWorldAchievements(roundInfo, allPlayers) {
     const badgeDef = ACHIEVEMENT_DEFINITIONS.topOfWorld;
     const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
-    // Only players who already played in this season (up to this round) are eligible.
+    // Only players active as of this round (played this season, within the last INACTIVE_AFTER_ROUNDS rounds) are eligible.
     const topRated = Object.values(allPlayers || {})
-        .filter(player => hasPlayedInSeason(player, roundInfo.season, roundInfo.roundOrder))
+        .filter(player => isActiveAtRound(player, roundInfo.season, roundInfo.roundOrder))
         .map(player => ({
             player,
             ratingAtRound: getPlayerRatingAtOrBeforeRound(player, roundInfo.seasonOrder, roundInfo.roundOrder)
@@ -4464,12 +4502,24 @@ function renderRatingPage() {
         return achievementsByPlayer;
     };
     
-    // Players with no match in the current season are "inactive" (grey) and go below everyone else.
+    // Players with no match in the current season, or none in its last INACTIVE_AFTER_ROUNDS played rounds,
+    // are "inactive" (grey) and go below everyone else.
     const currentSeason = getCurrentPlayedSeason();
-    const isInactive = (p) => !!currentSeason && !hasPlayedInSeason(p, currentSeason);
+    const activityCache = new Map();
+    const activityOf = (p) => {
+        if (!activityCache.has(p.name)) activityCache.set(p.name, getPlayerActivity(p, currentSeason));
+        return activityCache.get(p.name);
+    };
+    const isInactive = (p) => !!currentSeason && !activityOf(p).active;
+    const inactiveTitle = (p) => {
+        const {roundsSince} = activityOf(p);
+        return roundsSince === null
+            ? 'Neaktívny – v aktuálnej sezóne neodohral zápas'
+            : `Neaktívny – posledný zápas pred ${roundsSince} kolami`;
+    };
 
     // Helper function to get rating color group priority
-    // Green (21+ matches) = 3, Orange (11-20 matches) = 2, Red (0-10 matches) = 1, Grey (inactive this season) = 0
+    // Green (21+ matches) = 3, Orange (11-20 matches) = 2, Red (0-10 matches) = 1, Grey (inactive) = 0
     const getRatingColorGroup = (p) => {
         if (isInactive(p)) return 0; // Grey
         const totalMatches = (p.matches || 0) + (p.dMatches || 0);
@@ -4566,6 +4616,51 @@ function renderRatingPage() {
         if (!seasonOnly) return p;
         return (p.bySeason && p.bySeason[currentSeason || 'N/A']) || EMPTY_SEASON_STATS;
     };
+
+    // Player modal has its own scope toggle: seeded from the table toggle on open, but changing it
+    // inside the modal never touches the table toggle. Rating, rank and the rating chart stay all-time.
+    let modalSeasonOnly = false;
+    const seasonViewCache = new Map();
+    const getSeasonView = (p) => {
+        if (!p) return p;
+        const key = normalizePlayerKey(p.name);
+        if (seasonViewCache.has(key)) return seasonViewCache.get(key);
+        const details = (p.matchDetails || []).filter(m => (m.season || null) === (currentSeason || null));
+        const view = {
+            ...p,
+            matchDetails: details,
+            matches: 0, wins: 0, losses: 0, setsWin: 0, setsLose: 0,
+            dMatches: 0, dWins: 0, dLosses: 0, dSetsWin: 0, dSetsLose: 0,
+            bestWinOpponent: null, bestWinRating: -Infinity,
+            worstLossOpponent: null, worstLossRating: Infinity
+        };
+        details.forEach(m => {
+            const own = m.score_own || 0, opp = m.score_opp || 0;
+            if (m.isDoubles) {
+                view.dMatches++;
+                view.dSetsWin += own; view.dSetsLose += opp;
+                if (own > opp) view.dWins++; else if (opp > own) view.dLosses++;
+                return;
+            }
+            view.matches++;
+            view.setsWin += own; view.setsLose += opp;
+            const oppRating = (m.opp_rating_after || 0) - (m.delta_opp || 0);
+            if (own > opp) {
+                view.wins++;
+                if (oppRating > view.bestWinRating) { view.bestWinOpponent = m.opponent; view.bestWinRating = oppRating; }
+            } else if (opp > own) {
+                view.losses++;
+                if (oppRating < view.worstLossRating) { view.worstLossOpponent = m.opponent; view.worstLossRating = oppRating; }
+            }
+        });
+        // Keep "best win" identical to the table's season column.
+        const sb = p.bySeason && p.bySeason[currentSeason || 'N/A'];
+        if (sb && sb.bestWinOpponent) { view.bestWinOpponent = sb.bestWinOpponent; view.bestWinRating = sb.bestWinRating; }
+        seasonViewCache.set(key, view);
+        return view;
+    };
+    const modalScoped = (p) => (modalSeasonOnly && p ? getSeasonView(p) : p);
+    const currentSeasonOrder = currentSeason ? getSeasonOrder(currentSeason) : null;
 
     // Sorting state (applies to all columns except "Tím")
     const baselineIndex = new Map(sortedPlayers.map((p, i) => [normalizePlayerKey(p.name), i]));
@@ -4694,7 +4789,8 @@ function renderRatingPage() {
         const section = document.getElementById('playerAchievementsSection');
         const grid = document.getElementById('playerAchievementsGrid');
         if (!section || !grid || !player) return;
-        const badges = ensureAchievementsByPlayer()[normalizePlayerKey(player.name)] || [];
+        let badges = ensureAchievementsByPlayer()[normalizePlayerKey(player.name)] || [];
+        if (modalSeasonOnly) badges = badges.filter(b => currentSeasonOrder !== null && b.seasonOrder === currentSeasonOrder);
         const hasBadges = renderAchievementsBadges(grid, badges, { mergeDuplicateBadges: true });
         section.style.display = hasBadges ? '' : 'none';
     };
@@ -4810,7 +4906,7 @@ function renderRatingPage() {
 
             tr.innerHTML = `
                 <td>${ratingRank}</td><td>${p.name}</td><td>${p.team}</td>
-                <td class="${ratingClass}">${p.rating.toFixed(2)}</td>
+                <td class="${ratingClass}"${ratingClass === 'rating-inactive' ? ` title="${inactiveTitle(p)}"` : ''}>${p.rating.toFixed(2)}</td>
                 <td>${latestRoundPointsHtml}</td>
                 <td>${latestRoundEffectivenessHtml}</td>
                 <td class="form-cell">${formHtml}</td>
@@ -5208,8 +5304,8 @@ function renderRatingPage() {
         }
 
         activePlayer = p;
-        activeDerived = computeDerivedStats(p);
-        if (activeDerived) activeDerived.label = p.name;
+        modalSeasonOnly = seasonOnly;
+        if (modalSeasonToggle) modalSeasonToggle.checked = modalSeasonOnly;
         comparePlayer = null;
         compareDerived = null;
         ratingEffectivenessVisible = false;
@@ -5235,6 +5331,29 @@ function renderRatingPage() {
             }
         }
         document.getElementById('currentRatingVal').innerText = p.rating.toFixed(2);
+
+        playerModal.style.display = "flex";
+        // Defer chart renders slightly to allow modal layout to settle (fixes zero-size canvas on reload with ?player=)
+        setTimeout(() => {
+            renderLineChart(p, comparePlayer);
+        }, 80);
+        renderModalScopedContent();
+    };
+
+    // Everything in the modal that follows the season scope (badges, highlights, stats, match history).
+    const renderModalScopedContent = () => {
+        if (!activePlayer) return;
+        const p = modalScoped(activePlayer);
+        activeDerived = computeDerivedStats(p);
+        if (activeDerived) activeDerived.label = activePlayer.name;
+        if (comparePlayer) {
+            compareDerived = computeDerivedStats(modalScoped(comparePlayer));
+            if (compareDerived) compareDerived.label = comparePlayer.name;
+        }
+        const formTitle = document.querySelector('#formHistoryWrapper .form-history-title');
+        if (formTitle) formTitle.textContent = modalSeasonOnly
+            ? `Forma (${currentSeason || 'aktuálna sezóna'}, posledné novšie vpravo)`
+            : 'Forma (všetky zápasy, posledné novšie vpravo)';
         const setStat = (idName, idRate, oppName, oppRate) => {
             const elName = document.getElementById(idName);
             const elRate = document.getElementById(idRate);
@@ -5262,17 +5381,20 @@ function renderRatingPage() {
 
         renderDerivedStats(activeDerived, compareDerived);
 
-        playerModal.style.display = "flex";
-        // Defer chart renders slightly to allow modal layout to settle (fixes zero-size canvas on reload with ?player=)
-        setTimeout(() => {
-            renderLineChart(p, comparePlayer);
-        }, 80);
         renderPieCharts('matchesChart', 'setsChart', p.matches, p.wins, p.losses, p.setsWin, p.setsLose, 'matches', 'sets');
         renderPieCharts('dMatchesChart', 'dSetsChart', p.dMatches, p.dWins, p.dLosses, p.dSetsWin, p.dSetsLose, 'dMatches', 'dSets');
         renderFormHistory(p);
         renderHistory(p, players);
         renderHeadToHead(p, comparePlayer);
     };
+
+    const modalSeasonToggle = document.getElementById('modalSeasonOnlyToggle');
+    if (modalSeasonToggle) {
+        modalSeasonToggle.addEventListener('change', () => {
+            modalSeasonOnly = modalSeasonToggle.checked;
+            renderModalScopedContent();
+        });
+    }
 
     const renderLineChart = (p, compareP = null, attempt = 0) => {
         const effectivenessColor = getThemeVar('--color-warning', '#f59e0b');
@@ -5610,14 +5732,14 @@ function renderRatingPage() {
         if (activePlayer && activeDerived) {
             renderDerivedStats(activeDerived, null);
             renderLineChart(activePlayer, null);
-            renderHeadToHead(activePlayer, null);
+            renderHeadToHead(modalScoped(activePlayer), null);
         }
     };
 
     const applyComparison = (target) => {
         if (!activePlayer || !activeDerived) return;
         comparePlayer = target;
-        compareDerived = computeDerivedStats(target);
+        compareDerived = computeDerivedStats(modalScoped(target));
         if (compareDerived) compareDerived.label = target.name;
         setCompareStatus(`Porovnávanie s ${target.name}`, true);
         
@@ -5632,7 +5754,7 @@ function renderRatingPage() {
         
         renderDerivedStats(activeDerived, compareDerived);
         renderLineChart(activePlayer, comparePlayer);
-        renderHeadToHead(activePlayer, comparePlayer);
+        renderHeadToHead(modalScoped(activePlayer), comparePlayer);
     };
 
     const openPlayerFromUrl = () => {

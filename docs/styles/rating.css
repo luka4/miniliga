@@ -1367,7 +1367,7 @@ tbody td:nth-child(2) {
 
 /* ---------- Form dots: square, in the win / loss tones ---------- */
 .form-dot { width: 12px; height: 12px; border-radius: 0; box-shadow: none; /* taste-skill-ignore */ }
-.form-dot--win { background: var(--win); }
+.form-dot--win { background: var(--form-win, var(--color-success)); }
 .form-dot--loss { background: var(--loss); }
 .form-dot--empty { background: #cbd5e1; border: 0; }
 .form-history .form-dot { width: 14px; height: 14px; }
@@ -1794,3 +1794,7 @@ tbody td:nth-child(2) {
 .ex-chip--red { background: var(--color-danger); color: #fff; }
 .ex-scene > svg { opacity: 1; }
 .ex-ml .ex-kt { color: var(--draw); }
+
+/* Player modal: season-scope toggle under the header */
+#page-rating .modal-season-toggle { display: flex; width: fit-content; margin: 4px auto 16px; }
+#page-rating .modal-season-toggle .match-details-toggle__text { font-size: 14px; font-weight: 600; }

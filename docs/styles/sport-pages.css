@@ -85,7 +85,7 @@ body.sport-pages :is(.record-loss, .loss-text, .diff-down, .negative, .whatif-de
 body.sport-pages .record-draw { color: #b45309 !important; }
 body.sport-pages :is(.whatif-scenario--win, .whatif-scenario-mini.win) { background: var(--win); }
 body.sport-pages :is(.whatif-scenario--loss, .whatif-scenario-mini.loss) { background: var(--loss); }
-body.sport-pages :is(.form-indicator.win) { background: var(--win); color: var(--ink); }
+body.sport-pages :is(.form-indicator.win) { background: var(--form-win, var(--color-success)); color: var(--ink); }
 body.sport-pages :is(.form-indicator.loss) { background: var(--loss); color: var(--ink); }
 body.sport-pages :is(.form-indicator.draw) { background: var(--draw); color: var(--ink); }
 

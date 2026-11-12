@@ -134,6 +134,7 @@ body.sport {
   --win: #7db8ff;
   --draw: #f3cf5f;
   --loss: #f4868f;
+  --form-win: #5fcf8f; /* "Forma" markers: green win / coral loss */
 }
 
 .sport .score-badge--win { background: var(--win) !important; color: var(--ink) !important; }
