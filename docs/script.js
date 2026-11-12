@@ -638,15 +638,24 @@ function isRoundFullyPlayedForBadges(roundId) {
 function buildTopOfWorldAchievements(roundInfo, allPlayers) {
     const badgeDef = ACHIEVEMENT_DEFINITIONS.topOfWorld;
     const roundLabel = `${roundInfo.name}${roundInfo.season ? ` (${roundInfo.season})` : ''}`;
+    // Matches (singles + doubles) played up to and including this round.
+    const matchesAtRound = (player) => (player.matchDetails || []).filter(md => {
+        const so = getSeasonOrder(md.season);
+        return so < roundInfo.seasonOrder
+            || (so === roundInfo.seasonOrder && getRoundOrderFromStr(md.round) <= roundInfo.roundOrder);
+    }).length;
+    // Same order as the rating table: match-count group first (21+, 11-20, 0-10), then rating.
+    const countGroup = (n) => (n > 20 ? 3 : (n > 10 ? 2 : 1));
     // Only players active as of this round (played this season, within the last INACTIVE_AFTER_ROUNDS rounds) are eligible.
     const topRated = Object.values(allPlayers || {})
         .filter(player => isActiveAtRound(player, roundInfo.season, roundInfo.roundOrder))
         .map(player => ({
             player,
-            ratingAtRound: getPlayerRatingAtOrBeforeRound(player, roundInfo.seasonOrder, roundInfo.roundOrder)
+            ratingAtRound: getPlayerRatingAtOrBeforeRound(player, roundInfo.seasonOrder, roundInfo.roundOrder),
+            group: countGroup(matchesAtRound(player))
         }))
         .filter(item => Number.isFinite(item.ratingAtRound))
-        .sort((a, b) => b.ratingAtRound - a.ratingAtRound)
+        .sort((a, b) => (b.group - a.group) || (b.ratingAtRound - a.ratingAtRound))
         .slice(0, 3);
 
     return topRated.map((item, index) => {
@@ -3482,6 +3491,315 @@ function renderResultsPage() {
     renderMatches(null);
 }
 
+// ------------------------------------------------------------
+// Share card: an expanded team match drawn as a 1080x1350 PNG and handed to the
+// native share sheet (WhatsApp, mail, ...); desktop browsers download the file.
+// ------------------------------------------------------------
+const SHARE_CARD = {
+    W: 1080, H: 1350, PAD: 64,
+    ink: '#2c3e63', ink2: '#405482', sky: '#7db8ff', ground: '#f8fafc',
+    surface: '#ffffff', border: '#e5e7eb', text: '#1a2540', muted: '#6b7280'
+};
+const matchShareBlobCache = new WeakMap();
+
+function loadShareImage(src) {
+    if (!src) return Promise.resolve(null);
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+// Sets ctx.font to the largest size in [min, max] at which text fits maxW; truncates with … below min.
+function fitShareText(ctx, text, maxW, fontAt, max, min) {
+    let size = max;
+    ctx.font = fontAt(size);
+    while (size > min && ctx.measureText(text).width > maxW) {
+        size -= 1;
+        ctx.font = fontAt(size);
+    }
+    if (ctx.measureText(text).width <= maxW) return text;
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t.trimEnd() + '…';
+}
+
+function shareRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+function getShareMatchGames(match) {
+    const isD = g => g.doubles === true || g.doubles === 'true';
+    const played = (match.games || []).filter(isPlayedMatch);
+    const doubles = played.filter(isD).slice(0, 2);
+    const singles = played.filter(g => !isD(g));
+    const groups = [];
+    if (doubles.length) groups.push(doubles);
+    for (let i = 0; i < singles.length; i += 4) groups.push(singles.slice(i, i + 4));
+    let scoreA = 0, scoreB = 0;
+    played.forEach(g => {
+        const sA = parseInt(g.score_a) || 0, sB = parseInt(g.score_b) || 0;
+        if (sA > sB) scoreA++; else if (sB > sA) scoreB++;
+    });
+    return { groups, scoreA, scoreB };
+}
+
+async function renderMatchShareImage(match) {
+    const C = SHARE_CARD;
+    const { W, H, PAD } = C;
+    const display = size => `${size}px Anton, Impact, sans-serif`;
+    const text = (size, weight = 400) => `${weight} ${size}px Barlow, system-ui, sans-serif`;
+
+    if (document.fonts && document.fonts.load) {
+        await Promise.all([
+            document.fonts.load(display(40)), document.fonts.load(text(30, 400)),
+            document.fonts.load(text(30, 600))
+        ]).catch(() => {});
+    }
+    const [logoA, logoB] = await Promise.all([
+        loadShareImage(getTeamLogoSrc(match.teamA)), loadShareImage(getTeamLogoSrc(match.teamB))
+    ]);
+    const { groups, scoreA, scoreB } = getShareMatchGames(match);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+
+    // Page ground + header block
+    ctx.fillStyle = C.ground;
+    ctx.fillRect(0, 0, W, H);
+    const headH = 480;
+    ctx.fillStyle = C.ink;
+    ctx.fillRect(0, 0, W, headH);
+
+    ctx.fillStyle = C.sky;
+    ctx.textAlign = 'left';
+    ctx.font = display(44);
+    ctx.fillText('MINILIGA', PAD, 104);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffffff';
+    const seasonRound = [match.season, match.round].filter(Boolean).join(' · ').toUpperCase();
+    ctx.fillText(fitShareText(ctx, seasonRound, 600, s => text(s, 600), 30, 20), W - PAD, 100);
+    const when = [formatDateWithSlovakDay(match.date), match.location].filter(Boolean).join(' · ');
+    if (when) {
+        ctx.fillStyle = 'rgba(255,255,255,0.72)';
+        ctx.fillText(fitShareText(ctx, when, 700, s => text(s, 400), 26, 18), W - PAD, 142);
+    }
+
+    // Logos, score, team names
+    const tile = 170, tileY = 186;
+    const centers = [250, W - 250];
+    [[logoA, match.teamA], [logoB, match.teamB]].forEach(([img, name], i) => {
+        const x = centers[i] - tile / 2;
+        ctx.fillStyle = '#ffffff';
+        shareRoundRect(ctx, x, tileY, tile, tile, 20);
+        ctx.fill();
+        if (img && img.naturalWidth) {
+            const inner = tile - 28;
+            const scale = Math.min(inner / img.naturalWidth, inner / img.naturalHeight);
+            const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+            ctx.drawImage(img, centers[i] - w / 2, tileY + (tile - h) / 2, w, h);
+        } else {
+            const initials = String(name || '?').replace(/["„“]/g, '').split(/\s+/).filter(Boolean)
+                .slice(0, 2).map(p => p[0]).join('').toUpperCase();
+            ctx.fillStyle = C.ink;
+            ctx.textAlign = 'center';
+            ctx.font = display(70);
+            ctx.fillText(initials, centers[i], tileY + tile / 2 + 26);
+        }
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = display(150);
+    ctx.fillText(`${scoreA}:${scoreB}`, W / 2, tileY + tile / 2 + 56);
+
+    [match.teamA, match.teamB].forEach((name, i) => {
+        const lost = (i === 0 ? scoreA < scoreB : scoreB < scoreA);
+        ctx.fillStyle = lost ? 'rgba(255,255,255,0.7)' : '#ffffff';
+        ctx.fillText(fitShareText(ctx, String(name || '').toUpperCase(), 400, s => text(s, 600), 36, 22),
+            centers[i], tileY + tile + 62);
+    });
+
+    // Individual games, grouped like the expanded panel (doubles, then singles by 4)
+    const listTop = headH + 40, listBottom = H - 92, groupGap = 14;
+    const rowCount = groups.reduce((n, g) => n + g.length, 0);
+    const rowH = rowCount ? Math.min(60, (listBottom - listTop - groupGap * (groups.length - 1)) / rowCount) : 0;
+    const nameSize = Math.max(18, Math.min(28, Math.round(rowH * 0.5)));
+    const nameW = W / 2 - 54 - (PAD + 56);
+    const splitNames = s => String(s || '').split('/').map(n => n.trim()).filter(Boolean).join(' / ');
+    let y = listTop, runA = 0, runB = 0;
+
+    groups.forEach(group => {
+        const gh = rowH * group.length;
+        ctx.fillStyle = C.surface;
+        ctx.fillRect(PAD, y, W - PAD * 2, gh);
+        ctx.strokeStyle = C.border;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(PAD + 1, y + 1, W - PAD * 2 - 2, gh - 2);
+
+        group.forEach((g, idx) => {
+            const sA = parseInt(g.score_a) || 0, sB = parseInt(g.score_b) || 0;
+            if (sA > sB) runA++; else if (sB > sA) runB++;
+            const top = y + idx * rowH, mid = top + rowH / 2;
+            if (idx > 0) {
+                ctx.fillStyle = C.border;
+                ctx.fillRect(PAD + 16, top - 1, W - PAD * 2 - 32, 2);
+            }
+            // running team score at the edges
+            ctx.fillStyle = C.muted;
+            ctx.font = display(Math.round(nameSize * 0.95));
+            ctx.textAlign = 'left';
+            ctx.fillText(String(runA), PAD + 20, mid + nameSize * 0.36);
+            ctx.textAlign = 'right';
+            ctx.fillText(String(runB), W - PAD - 20, mid + nameSize * 0.36);
+
+            // game score pill
+            const pillW = 92, pillH = Math.min(44, rowH - 10);
+            ctx.fillStyle = C.ink;
+            shareRoundRect(ctx, W / 2 - pillW / 2, mid - pillH / 2, pillW, pillH, 8);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.font = display(Math.round(pillH * 0.62));
+            ctx.fillText(`${sA}:${sB}`, W / 2, mid + pillH * 0.22);
+
+            // player names: winner bold/dark, loser muted
+            const drawName = (names, won, align, x) => {
+                ctx.textAlign = align;
+                ctx.fillStyle = won ? C.text : C.muted;
+                const t = fitShareText(ctx, splitNames(names), nameW, s => text(s, won ? 600 : 400), nameSize, 16);
+                ctx.fillText(t, x, mid + nameSize * 0.34);
+            };
+            drawName(g.player_a, sA > sB, 'right', W / 2 - 62);
+            drawName(g.player_b, sB > sA, 'left', W / 2 + 62);
+        });
+        y += gh + groupGap;
+    });
+
+    // Footer
+    ctx.fillStyle = C.ink;
+    ctx.textAlign = 'center';
+    ctx.font = text(28, 600);
+    ctx.fillText('miniliga.sk', W / 2, H - 40);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
+    });
+}
+
+function getMatchShareBlob(match) {
+    let p = matchShareBlobCache.get(match);
+    if (!p) {
+        p = renderMatchShareImage(match);
+        p.catch(() => matchShareBlobCache.delete(match));
+        matchShareBlobCache.set(match, p);
+    }
+    return p;
+}
+
+function getMatchShareFileName(match) {
+    const slug = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+    return `miniliga-${slug(match.round)}-${slug(match.teamA)}-${slug(match.teamB)}.png`;
+}
+
+// Preview modal: shows the generated card with "Zdieľať" (native share sheet, or download where
+// file sharing is unsupported) and "Zrušiť". Sharing starts from a tap on a ready image.
+function openMatchShareModal(match) {
+    const overlay = document.createElement('div');
+    overlay.className = 'share-modal';
+    overlay.innerHTML = `
+        <div class="share-modal__dialog" role="dialog" aria-modal="true" aria-label="Zdieľať výsledok">
+            <div class="share-modal__preview"><div class="share-modal__loading">Pripravujem obrázok…</div></div>
+            <div class="share-modal__actions">
+                <button type="button" class="share-modal__btn share-modal__btn--ghost" data-share-cancel>Zrušiť</button>
+                <button type="button" class="share-modal__btn share-modal__btn--primary" data-share-go disabled>Zdieľať</button>
+            </div>
+        </div>`;
+    const preview = overlay.querySelector('.share-modal__preview');
+    const goBtn = overlay.querySelector('[data-share-go]');
+    const cancelBtn = overlay.querySelector('[data-share-cancel]');
+    let objectUrl = null;
+    let file = null;
+
+    const close = () => {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        document.body.classList.remove('share-modal-open');
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    overlay.addEventListener('click', (e) => { e.stopPropagation(); if (e.target === overlay) close(); });
+    cancelBtn.addEventListener('click', close);
+
+    goBtn.addEventListener('click', async () => {
+        if (!file) return;
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ files: [file] });
+                close();
+            } catch (err) {
+                if (!err || err.name !== 'AbortError') console.error('Share failed', err);
+            }
+            return;
+        }
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    });
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('share-modal-open');
+    cancelBtn.focus();
+
+    getMatchShareBlob(match).then(blob => {
+        if (!overlay.isConnected) return;
+        file = new File([blob], getMatchShareFileName(match), { type: 'image/png' });
+        objectUrl = URL.createObjectURL(blob);
+        const img = document.createElement('img');
+        img.className = 'share-modal__img';
+        img.alt = `${match.teamA} – ${match.teamB}`;
+        img.src = objectUrl;
+        preview.replaceChildren(img);
+        const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+        goBtn.textContent = canShareFiles ? 'Zdieľať' : 'Stiahnuť';
+        goBtn.disabled = false;
+        goBtn.focus();
+    }).catch(err => {
+        console.error('Share image failed', err);
+        if (overlay.isConnected) preview.innerHTML = '<div class="share-modal__loading">Obrázok sa nepodarilo vytvoriť.</div>';
+    });
+}
+
+function buildMatchShareButton(match) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'match-share-btn';
+    btn.setAttribute('aria-label', 'Zdieľať výsledok ako obrázok');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span>Zdieľať</span>';
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMatchShareModal(match);
+    });
+    return btn;
+}
+
 // Shared Helper for List
 // Detailed game row names: player name plus rating after the match and rating gain/loss (like the player history).
 function buildGameNamesHtml(g, sA, sB, playersData) {
@@ -4125,6 +4443,7 @@ function renderMatchList(matches, container, appendToProvided, playersData = nul
                     const detailsHeader = document.createElement('div');
                     detailsHeader.className = 'match-details-header';
                     detailsHeader.appendChild(toggleLabel);
+                    detailsHeader.appendChild(buildMatchShareButton(match));
                     statsGroup.insertAdjacentElement('afterend', detailsHeader);
                 }
             };
@@ -8975,6 +9294,7 @@ function renderMyTeamPage() {
                     const detailsHeader = document.createElement('div');
                     detailsHeader.className = 'match-details-header';
                     detailsHeader.appendChild(toggleLabel);
+                    detailsHeader.appendChild(buildMatchShareButton(match));
                     statsGroup.insertAdjacentElement('afterend', detailsHeader);
                 }
             };
@@ -9251,6 +9571,7 @@ function renderMyTeamPage() {
                                 const detailsHeader = document.createElement('div');
                                 detailsHeader.className = 'match-details-header';
                                 detailsHeader.appendChild(toggleLabel);
+                                detailsHeader.appendChild(buildMatchShareButton(match));
                                 statsGroup.insertAdjacentElement('afterend', detailsHeader);
                             }
                         };
