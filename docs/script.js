@@ -218,11 +218,11 @@ const ACHIEVEMENT_DEFINITIONS = {
     },
     mostEffective: {
         id: 'mostEffective',
-        name: 'Najefektívnejší hráč kola',
+        name: 'Najefektívnejší hráč',
         icon: 'media/badges/badge-most-effective.png',
         sortOrder: 7,
         tiers: [
-            {rank: 1, tier: 'gold', title: 'Najefektívnejší hráč kola'}
+            {rank: 1, tier: 'gold', title: 'Najefektívnejší hráč'}
         ]
     }
 };
@@ -799,17 +799,17 @@ function renderAchievementsBadges(containerEl, badges = [], options = {}) {
         const representative = groupedBadges[0];
         const multiplier = groupedBadges.length;
         const toggleId = `badge-toggle-${idx}`;
-        const showExpand = multiplier > 1;
+        const showMultiplier = multiplier > 1;
         return `<article class="achievement-badge achievement-badge--merged" title="${escapeAttr(representative.badgeName)}">
-            <button type="button" class="achievement-badge-toggle" data-badge-toggle="${escapeAttr(toggleId)}" aria-expanded="false" ${showExpand ? '' : 'disabled'}>
+            <button type="button" class="achievement-badge-toggle" data-badge-toggle="${escapeAttr(toggleId)}" aria-expanded="false">
                 <span class="achievement-badge-circle-wrap">
                     <span class="achievement-badge-circle achievement-badge-circle--${escapeAttr(representative.tier)}">
                         ${renderBadgeIcon(representative)}
                     </span>
-                    ${showExpand ? `<span class="achievement-badge-multiplier">x${multiplier}</span>` : ''}
+                    ${showMultiplier ? `<span class="achievement-badge-multiplier">x${multiplier}</span>` : ''}
                 </span>
                 <div class="achievement-badge-name">${escapeHtml(representative.title)}</div>
-                <div class="achievement-badge-desc">${showExpand ? 'Kliknite pre zobrazenie detailu.' : renderBadgeDetails(representative)}</div>
+                <div class="achievement-badge-desc">Kliknite pre zobrazenie detailu.</div>
             </button>
         </article>`;
     }).join('');
@@ -819,7 +819,7 @@ function renderAchievementsBadges(containerEl, badges = [], options = {}) {
             if (btn.disabled) return;
             const key = btn.getAttribute('data-badge-toggle');
             const item = renderItems.find(x => x.kind === 'mergedTopWorld' && `badge-toggle-${renderItems.indexOf(x)}` === key);
-            if (!item || !item.badges || item.badges.length <= 1) return;
+            if (!item || !item.badges || item.badges.length === 0) return;
             const representative = item.badges[0];
             const sortedBadges = [...item.badges].sort((a, b) => {
                 if ((a.seasonOrder || 0) !== (b.seasonOrder || 0)) return (b.seasonOrder || 0) - (a.seasonOrder || 0);
@@ -829,7 +829,8 @@ function renderAchievementsBadges(containerEl, badges = [], options = {}) {
             const bodyHtml = sortedBadges
                 .map(b => `<div class="achievement-badge-modal-item">${renderBadgeDetails(b)}</div>`)
                 .join('');
-            openAchievementsDetailsModal(`${representative.title} (x${item.badges.length})`, bodyHtml);
+            const modalTitle = item.badges.length > 1 ? `${representative.title} (x${item.badges.length})` : representative.title;
+            openAchievementsDetailsModal(modalTitle, bodyHtml);
         });
     });
     return true;
