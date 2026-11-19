@@ -2636,11 +2636,18 @@ function renderHomeHero({ players, currentRoundId, playedMatches, upcomingMatche
     setText('heroRound', sample ? sample.round : '–');
     setText('heroSeason', sample && sample.season ? sample.season.charAt(0) + sample.season.slice(1).toLowerCase() : 'Zatiaľ žiadne zápasy');
 
-    // Rating leader among players who played in the current season
-    const season = sample ? sample.season : null;
+    // Rating leader: the top of the rating table, i.e. among active players (played in the current
+    // season within the last INACTIVE_AFTER_ROUNDS rounds), by match-count group, then rating.
     const list = Object.values(players);
-    const pool = list.filter(p => p.matches > 0 && (!season || p.lastPlayedSeason === season));
-    const leader = (pool.length ? pool : list.filter(p => p.matches > 0)).sort((a, b) => b.rating - a.rating)[0];
+    const playedSeason = getCurrentPlayedSeason();
+    const countGroup = (p) => {
+        const n = (p.matches || 0) + (p.dMatches || 0);
+        return n > 20 ? 3 : (n > 10 ? 2 : 1);
+    };
+    const pool = list.filter(p => (p.matches || 0) + (p.dMatches || 0) > 0
+        && (!playedSeason || getPlayerActivity(p, playedSeason).active));
+    const leader = (pool.length ? pool : list.filter(p => p.matches > 0))
+        .sort((a, b) => (countGroup(b) - countGroup(a)) || (b.rating - a.rating))[0];
     setName('heroLeaderName', leader && leader.name);
     setText('heroLeaderMeta', leader ? `${Math.round(leader.rating)} rating · ${leader.team}` : '');
 
