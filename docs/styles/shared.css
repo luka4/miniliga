@@ -1205,6 +1205,12 @@ a {
 .game-player-meta .diff-down { color: var(--color-danger); }
 .game-player-meta .diff-neu { color: var(--draw, #f3cf5f); }
 
+/* Losing player/pair in the detailed team match view: dimmed name */
+.game-side--lost .game-player-name {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
 .game-score {
   font-weight: 900;
   font-size: 1.2em;

@@ -3833,7 +3833,10 @@ function buildGameNamesHtml(g, sA, sB, playersData) {
         }).join('');
     };
     const scoreClass = sA > sB ? 'win-left' : (sB > sA ? 'win-right' : '');
-    return `<div class="game-names"><div class="player-left">${sideHtml(g.player_a, g.player_b, sA, sB)}</div><div class="game-score ${scoreClass}">${sA}:${sB}</div><div class="player-right">${sideHtml(g.player_b, g.player_a, sB, sA)}</div></div>`;
+    // Losing side is dimmed (like the share image) so the winner stands out.
+    const lostA = sB > sA ? ' game-side--lost' : '';
+    const lostB = sA > sB ? ' game-side--lost' : '';
+    return `<div class="game-names"><div class="player-left${lostA}">${sideHtml(g.player_a, g.player_b, sA, sB)}</div><div class="game-score ${scoreClass}">${sA}:${sB}</div><div class="player-right${lostB}">${sideHtml(g.player_b, g.player_a, sB, sA)}</div></div>`;
 }
 
 function renderMatchList(matches, container, appendToProvided, playersData = null, teamMapData = null, selectedTeamForFilter = null) {

@@ -292,6 +292,8 @@ body.sport {
 .sport .game-score { font-family: var(--font-display); font-weight: 400; font-size: 22px; color: var(--ink); }
 .sport .game-score.win-left, .sport .game-score.win-right { color: var(--ink); }
 .sport .game-player { font-weight: 600; }
+.sport .game-side--lost .game-player { font-weight: 400; }
+.sport .game-side--lost .game-player-name { color: var(--color-muted); }
 .sport .doubles-badge { border-radius: 0; background: var(--ink); color: var(--sky); }
 
 /* ---------- Player lists ---------- */
