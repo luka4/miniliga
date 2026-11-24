@@ -2817,6 +2817,8 @@ function renderHomePage() {
             const prevHeader = document.getElementById('prevRoundTitle').parentElement;
             if (prevHeader) prevHeader.style.display = 'none';
         }
+
+        setupHomeRoundNav(allRoundIds, currentRoundId, players, teamMap);
     }
 
     // --- UPCOMING MATCHES LOGIC ---
@@ -2850,6 +2852,102 @@ function renderHomePage() {
     } else {
         upcomingContainer.style.display = 'none';
     }
+}
+
+// Mobile: previous / next round buttons fixed to the screen edges beside a round table (`anchor`).
+// They stay centred on the visible part of the table and fade out as it leaves the viewport.
+// With `anchor` null they stay fixed at mid-screen and always visible (highlights page).
+// Returns { setTargets(prev, next), place } where prev/next are { label, aria } or null (hides that side).
+function createRoundSideNav(anchor, { onPrev, onNext }) {
+    document.querySelectorAll('.round-nav').forEach(el => el.remove());
+    const makeBtn = (dir, onClick) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `round-nav round-nav--${dir}`;
+        b.innerHTML = `<svg class="round-nav__arrow" viewBox="0 0 12 20" aria-hidden="true"><path d="${dir === 'prev' ? 'M10 2 2 10l8 8' : 'M2 2l8 8-8 8'}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="round-nav__label"></span>`;
+        b.addEventListener('click', onClick);
+        document.body.appendChild(b);
+        return b;
+    };
+    const prevBtn = makeBtn('prev', onPrev);
+    const nextBtn = makeBtn('next', onNext);
+
+    const FADE_PX = 260;
+    let raf = 0;
+    function place() {
+        raf = 0;
+        if (!anchor) return; // fixed mid-screen via CSS defaults
+        const r = anchor.getBoundingClientRect();
+        const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-offset')) || 64;
+        const visTop = Math.max(r.top, headerH);
+        const visBottom = Math.min(r.bottom, window.innerHeight);
+        const opacity = Math.max(0, Math.min(1, (visBottom - visTop - 80) / (FADE_PX - 80)));
+        const y = (visTop + visBottom) / 2;
+        [prevBtn, nextBtn].forEach(btn => {
+            btn.style.top = `${y}px`;
+            btn.style.opacity = String(opacity);
+            btn.classList.toggle('is-off', opacity < 0.05);
+        });
+    }
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(place); };
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+
+    const setTargets = (prev, next) => {
+        [[prevBtn, prev], [nextBtn, next]].forEach(([btn, t]) => {
+            btn.hidden = !t;
+            if (!t) return;
+            btn.querySelector('.round-nav__label').textContent = t.label;
+            btn.setAttribute('aria-label', t.aria);
+        });
+        place();
+    };
+
+    document.body.classList.add('has-round-nav');
+    place();
+    return { setTargets, place };
+}
+
+// Home (mobile): the side buttons switch the "Aktuálne Kolo" table to other rounds in place;
+// they replace the separate previous / next round blocks (hidden via CSS).
+function setupHomeRoundNav(allRoundIds, currentRoundId, players, teamMap) {
+    const section = document.getElementById('latestRoundSection');
+    const container = document.getElementById('latestRoundContainer');
+    const titleEl = document.getElementById('latestRoundTitle');
+    if (!section || !container || !titleEl || !allRoundIds.length) return;
+
+    const roundLabel = (id) => {
+        const m = matchResults.find(x => getMatchRoundId(x) === id);
+        return m ? { round: m.round, season: m.season || '' } : { round: id, season: '' };
+    };
+    const currentIdx = allRoundIds.indexOf(currentRoundId);
+    if (currentIdx < 0) return;
+    let idx = currentIdx;
+
+    const target = (i, aria) => {
+        if (i < 0 || i >= allRoundIds.length) return null;
+        const l = roundLabel(allRoundIds[i]);
+        return { label: i === currentIdx ? 'Aktuálne' : l.round, aria: `${aria}: ${l.round}${l.season ? ` (${l.season})` : ''}` };
+    };
+    const updateButtons = () => nav.setTargets(target(idx - 1, 'Predchádzajúce kolo'), target(idx + 1, 'Nasledujúce kolo'));
+
+    const show = (newIdx) => {
+        if (newIdx < 0 || newIdx >= allRoundIds.length) return;
+        idx = newIdx;
+        const id = allRoundIds[idx];
+        const l = roundLabel(id);
+        const name = `${l.round}${l.season ? ` (${l.season})` : ''}`;
+        const prefix = idx === currentIdx ? 'Aktuálne Kolo' : (idx < currentIdx ? 'Odohrané Kolo' : 'Budúce Kolo');
+        titleEl.innerText = `${prefix}: ${name}`;
+        container.innerHTML = '';
+        renderMatchList(matchResults.filter(m => getMatchRoundId(m) === id), container, false, players, teamMap);
+        section.classList.toggle('is-other-round', idx !== currentIdx);
+        updateButtons();
+        if (section.getBoundingClientRect().top < 0) section.scrollIntoView({ block: 'start' });
+    };
+
+    const nav = createRoundSideNav(section, { onPrev: () => show(idx - 1), onNext: () => show(idx + 1) });
+    updateButtons();
 }
 
 // --- HIGHLIGHTS PAGE ---
@@ -2959,13 +3057,22 @@ function renderHighlightsPage() {
         });
         return totalWeight > 0 ? (weightedSum / totalWeight) : 0;
     };
+    // Mobile side buttons, always on screen; they reuse the page's prev / next handlers.
+    const sideNav = createRoundSideNav(null, {
+        onPrev: () => prevRoundBtn.click(),
+        onNext: () => nextRoundBtn.click()
+    });
+    const sideTarget = (r, aria) => r ? { label: r.name, aria: `${aria}: ${r.name}${r.season ? ` (${r.season})` : ''}` } : null;
     const updateRoundNavButtons = (roundId) => {
         const idx = allRounds.findIndex(r => r.id === roundId);
         if (idx < 0) {
             prevButtons.forEach(btn => { btn.disabled = true; });
             nextButtons.forEach(btn => { btn.disabled = true; });
+            sideNav.setTargets(null, null);
             return;
         }
+        // allRounds are sorted newest -> oldest
+        sideNav.setTargets(sideTarget(allRounds[idx + 1], 'Predchádzajúce kolo'), sideTarget(allRounds[idx - 1], 'Nasledujúce kolo'));
         // allRounds are sorted newest -> oldest
         const disablePrev = idx >= allRounds.length - 1; // older
         const disableNext = idx <= 0; // newer

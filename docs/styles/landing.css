@@ -436,3 +436,9 @@ body:not(.loading) .pulse__tile:nth-child(4) { animation-delay: 0.39s; }
   will-change: transform, translate;
 }
 .hero__ball.is-live { opacity: 1; }
+
+/* Mobile: the side round buttons (styles in sport.css) replace the previous / next round blocks */
+@media (max-width: 700px) {
+  #latestRoundSection.is-other-round { border-style: dashed; }
+  .has-round-nav .duo { display: none; }
+}

@@ -645,3 +645,45 @@ body.sport .results-filter-btn--clear:hover { background: var(--ink-3); opacity:
 }
 .sport .match-ratings__grid .team-rating-info { margin: 0; }
 .sport .rating-team-name { font-weight: 600; font-size: 14px; color: var(--ink); }
+
+/* Mobile: previous / next round buttons beside a round table (placed by createRoundSideNav in script.js; home + highlights) */
+.round-nav { display: none; }
+
+@media (max-width: 700px) {
+  .round-nav {
+    position: fixed;
+    z-index: 40;
+    top: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 30px;
+    padding: 10px 0 12px;
+    border: 0;
+    background: var(--ink);
+    color: #fff;
+    font-family: var(--font-display);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: opacity .2s linear, background-color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .round-nav[hidden] { display: none; }
+  .round-nav.is-off { pointer-events: none; visibility: hidden; }
+  .round-nav:active { background: var(--color-accent); }
+  .round-nav:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+  .round-nav--prev { left: 0; border-radius: 0 10px 10px 0; }
+  .round-nav--next { right: 0; border-radius: 10px 0 0 10px; }
+  .round-nav__arrow { width: 10px; height: 16px; flex: none; }
+  .round-nav__label {
+    writing-mode: vertical-rl;
+    font-size: 14px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .round-nav--prev .round-nav__label { transform: rotate(180deg); }
+  /* Highlights: the top prev / next row is redundant next to the side buttons */
+  body.has-round-nav .highlights-bottom-nav.highlights-top-nav { display: none; }
+}
