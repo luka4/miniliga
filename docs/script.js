@@ -3285,8 +3285,25 @@ function renderHighlightsPage() {
     renderRoundHighlights(initialRoundId);
     initFlipCards(document.getElementById('mainContainer') || document);
 
+    // Switching rounds changes the height of the sections above the one being read (match table,
+    // badges), which would make the page jump. Keep the section the reader is looking at in place.
+    const renderKeepingPosition = (roundId) => {
+        const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-offset')) || 64;
+        const pageMain = document.getElementById('mainContainer');
+        const anchors = pageMain ? Array.from(pageMain.querySelectorAll('.section-header')) : [];
+        const readLine = headerH + (window.innerHeight - headerH) / 3;
+        let anchor = null;
+        anchors.forEach(el => { if (el.offsetParent && el.getBoundingClientRect().top <= readLine) anchor = el; });
+        const before = anchor ? anchor.getBoundingClientRect().top : 0;
+        renderRoundHighlights(roundId);
+        if (anchor) {
+            const delta = anchor.getBoundingClientRect().top - before;
+            if (Math.abs(delta) > 0.5) window.scrollTo({ top: window.scrollY + delta, behavior: 'instant' });
+        }
+    };
+
     roundSelect.addEventListener('change', () => {
-        renderRoundHighlights(roundSelect.value || null);
+        renderKeepingPosition(roundSelect.value || null);
     });
     prevButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -3294,7 +3311,7 @@ function renderHighlightsPage() {
             if (idx >= 0 && idx < allRounds.length - 1) {
                 const nextId = allRounds[idx + 1].id;
                 roundSelect.value = nextId;
-                renderRoundHighlights(nextId);
+                renderKeepingPosition(nextId);
             }
         });
     });
@@ -3304,7 +3321,7 @@ function renderHighlightsPage() {
             if (idx > 0) {
                 const nextId = allRounds[idx - 1].id;
                 roundSelect.value = nextId;
-                renderRoundHighlights(nextId);
+                renderKeepingPosition(nextId);
             }
         });
     });
