@@ -1,0 +1,244 @@
+/* ============================================================
+   HEAD-TO-HEAD PAGE (h2h.html): player vs player and team vs team.
+   Loaded after sport.css / sport-pages.css (tokens: --ink, --sky, --gutter).
+   Player A is blue, player B is coral, everywhere on the page.
+   ============================================================ */
+
+#page-h2h {
+  --h2h-a: var(--color-accent);
+  --h2h-b: var(--color-accent-2);
+  --h2h-win: #16a34a;
+}
+
+/* ---------- Toolbar ---------- */
+.h2h-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.h2h-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.h2h-seg { display: inline-flex; border: 2px solid var(--ink); background: #fff; }
+.h2h-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.h2h-seg button.is-active { background: var(--ink); color: #fff; }
+.h2h-seg button:not(.is-active):hover { background: var(--sky); }
+.h2h-seg button[hidden] { display: none; }
+.h2h-seg--small { border-width: 1px; }
+.h2h-seg--small button { font-size: 13px; padding: 7px 12px; }
+body[data-h2h-mode="teams"] #h2hTypeSeg { display: none; }
+
+/* ---------- Duel card ---------- */
+.h2h-duel {
+  display: grid;
+  grid-template-columns: 1fr 240px 1fr;
+  border: 2px solid var(--ink);
+}
+
+.h2h-side { position: relative; padding: 22px 26px; color: #fff; min-width: 0; }
+.h2h-side--a { background: var(--h2h-a); }
+.h2h-side--b { background: var(--h2h-b); text-align: right; }
+
+#page-h2h .h2h-side .h2h-pick {
+  appearance: none;
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 0 14px;
+  padding: 5px 10px !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+  font: 600 13px var(--font-sans) !important;
+  cursor: pointer;
+}
+#page-h2h .h2h-side--b .h2h-pick { margin-left: auto; text-align: right; }
+#page-h2h .h2h-side .h2h-pick::placeholder { color: #fff; opacity: 1; }
+#page-h2h .h2h-side .h2h-pick:focus,
+#page-h2h .h2h-side .h2h-pick:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: rgba(255, 255, 255, 0.3) !important; }
+#page-h2h .h2h-side .h2h-pick option { color: var(--color-text); }
+
+.h2h-first { font-size: 20px; font-weight: 600; line-height: 1.2; opacity: 0.92; }
+.h2h-last {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5vw, 64px);
+  line-height: 0.98;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.h2h-meta { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 15px; font-weight: 500; }
+.h2h-side--b .h2h-meta { flex-direction: row-reverse; }
+.h2h-meta__team { min-width: 0; }
+.h2h-rating { font-family: var(--font-display); font-size: 26px; line-height: 1; }
+
+.h2h-logo {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 12px;
+  overflow: hidden;
+}
+.h2h-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.h2h-logo--big { width: 72px; height: 72px; margin: 0 0 20px; font-size: 20px; padding: 6px; }
+.h2h-side--b .h2h-logo--big { margin-left: auto; }
+
+.h2h-mid {
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  text-align: center;
+}
+.h2h-mid__label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; font-weight: 600; }
+.h2h-score { font-family: var(--font-display); font-size: 96px; line-height: 1; }
+.h2h-score i { font-style: normal; color: var(--sky); padding: 0 6px; }
+.h2h-mid__sub { font-size: 15px; font-weight: 600; opacity: 0.88; line-height: 1.35; }
+.h2h-swap {
+  margin-top: 6px;
+  appearance: none;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  font: 600 12px var(--font-sans);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.h2h-swap:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* Win share bar under the duel card */
+.h2h-bar { display: flex; height: 12px; border: 2px solid var(--ink); border-top: 0; background: var(--h2h-b); }
+.h2h-bar span { display: block; background: var(--h2h-a); }
+
+/* ---------- Cards ---------- */
+.h2h-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.h2h-card { background: #fff; border: 2px solid var(--ink); padding: 18px 20px; min-width: 0; }
+.h2h-card--full { grid-column: 1 / -1; }
+.h2h-card h2 {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.h2h-card h2.h2h-card__sub { margin-top: 20px; }
+.h2h-note { margin: 8px 0 0; font-size: 13px; color: var(--ink-3); line-height: 1.4; }
+.h2h-fixture { margin: 0 0 10px; font-size: 15px; }
+.h2h-note + .h2h-prob { margin-top: 12px; }
+
+/* Win chance */
+.h2h-prob { display: flex; height: 44px; font-family: var(--font-display); font-size: 22px; color: #fff; background: var(--h2h-b); }
+.h2h-prob > div { display: flex; align-items: center; padding: 0 12px; }
+.h2h-prob__a { background: var(--h2h-a); }
+.h2h-prob__b { flex: 1; justify-content: flex-end; }
+
+/* Comparison table */
+.h2h-compare { width: 100%; border-collapse: collapse; font-size: 15px; }
+.h2h-compare td { padding: 7px 0; border-bottom: 1px solid var(--color-border); }
+.h2h-compare .k { text-align: center; color: var(--color-text-subtle); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 7px 8px; }
+.h2h-compare .va { font-weight: 600; text-align: left; }
+.h2h-compare .vb { font-weight: 600; text-align: right; }
+.h2h-compare .is-better { color: var(--h2h-win); }
+
+.h2h-form { display: inline-flex; gap: 3px; vertical-align: middle; }
+.h2h-form b { display: inline-block; width: 12px; height: 12px; background: #cbd5e1; }
+.h2h-form b.W { background: var(--color-accent-3); }
+.h2h-form b.L { background: #ef4444; }
+
+/* Chart */
+.h2h-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+.h2h-legend span::before { content: ""; display: inline-block; width: 14px; height: 4px; margin-right: 6px; vertical-align: middle; background: currentColor; }
+.h2h-legend .h2h-legend__dot { color: var(--ink); }
+.h2h-legend .h2h-legend__dot::before { display: none; }
+.h2h-chart { position: relative; height: 300px; }
+
+/* Meetings list */
+.h2h-row {
+  display: grid;
+  grid-template-columns: 190px 1fr 110px 1fr;
+  align-items: center;
+  gap: 0 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 15px;
+}
+.h2h-row--team { grid-template-columns: 190px 1fr 110px 1fr 90px; }
+.h2h-row__when { color: var(--color-muted); font-size: 13px; line-height: 1.35; }
+.h2h-row__b { text-align: right; }
+.h2h-row__score { font-family: var(--font-display); font-size: 24px; text-align: center; color: var(--ink-3); }
+.h2h-row__score.is-a { color: var(--h2h-a); }
+.h2h-row__score.is-b { color: var(--h2h-b); }
+.h2h-row__sets { text-align: right; color: var(--color-muted); font-size: 13px; }
+.h2h-home { margin-left: 6px; padding: 2px 6px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 600; vertical-align: middle; }
+
+/* Player x player grid (teams view) */
+.h2h-scroll { overflow-x: auto; margin-top: 10px; }
+.h2h-grid-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.h2h-grid-table th { font-weight: 600; color: var(--color-text-subtle); font-size: 13px; padding: 6px 4px; }
+.h2h-grid-table th.cb { text-align: center; }
+.h2h-grid-table th.ra { text-align: left; white-space: nowrap; padding-right: 10px; }
+.h2h-grid-table td.c { text-align: center; font-family: var(--font-display); font-size: 18px; padding: 8px 2px; border: 2px solid #fff; background: #f1f5f9; color: var(--ink); }
+.h2h-grid-table td.c[data-a] { cursor: pointer; }
+.h2h-grid-table td.c[data-a]:hover { outline: 2px solid var(--ink); outline-offset: -2px; }
+.h2h-grid-table td.wa { background: #dbeafe; color: #1d4ed8; }
+.h2h-grid-table td.wb { background: #ffe4e6; color: #be123c; }
+.h2h-grid-table td.eq { background: #eef2f8; color: var(--color-text-subtle); }
+.h2h-grid-table td.n { background: transparent; color: #cbd5e1; font-family: var(--font-sans); font-size: 14px; }
+.h2h-grid-table th.tot, .h2h-grid-table td.tot { background: #f1f5f9; color: var(--ink); }
+
+/* ---------- Phone ---------- */
+@media (max-width: 760px) {
+  .h2h-duel { grid-template-columns: 1fr 1fr; }
+  .h2h-mid { grid-column: 1 / -1; grid-row: 1; flex-direction: row; flex-wrap: wrap; gap: 4px 16px; padding: 12px 8px; }
+  .h2h-mid__label { display: none; }
+  .h2h-score { font-size: 56px; }
+  .h2h-mid__sub { text-align: left; font-size: 14px; }
+  .h2h-side { padding: 14px; }
+  .h2h-last { font-size: clamp(26px, 8vw, 36px); }
+  .h2h-first { font-size: 15px; }
+  #page-h2h .h2h-side .h2h-pick { font-size: 12px !important; margin-bottom: 8px; }
+  .h2h-meta { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 13px; }
+  .h2h-side--b .h2h-meta { flex-direction: column; align-items: flex-end; }
+  .h2h-meta .h2h-logo { display: none; }
+  .h2h-logo--big { width: 48px; height: 48px; margin-bottom: 10px; }
+  .h2h-grid { grid-template-columns: 1fr; }
+  .h2h-card { padding: 16px; }
+  .h2h-chart { height: 240px; }
+  .h2h-row, .h2h-row--team { grid-template-columns: 1fr auto; grid-template-areas: "when score"; gap: 0 12px; }
+  .h2h-row__when { grid-area: when; }
+  .h2h-row__score { grid-area: score; }
+  .h2h-row__a, .h2h-row__b, .h2h-row__sets { display: none; }
+  .h2h-grid-table { font-size: 12px; }
+  .h2h-grid-table td.c { font-size: 14px; padding: 6px 0; }
+  .h2h-grid-table th { font-size: 11px; padding: 4px 2px; }
+  .h2h-grid-table th.cb { height: 78px; vertical-align: bottom; }
+  .h2h-grid-table th.cb span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; }
+}

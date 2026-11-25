@@ -10226,6 +10226,694 @@ function renderMyTeamPage() {
 }
 
 // ============================================================
+// HEAD-TO-HEAD PAGE (h2h.html)
+// ------------------------------------------------------------
+// Player vs player and team vs team on one page. Everything is derived from the
+// processData() players (matchDetails / history) and from window.matchResults,
+// so it follows the same season rosters and mode flags as the other pages.
+// ============================================================
+
+// Meetings of `player` against `opponentName`, from the player's own match list.
+// Doubles count when the opponent stood on the other side of the net.
+function getHeadToHeadMeetings(player, opponentName, { type = 'singles', seasonOrder = null } = {}) {
+    if (!player || !opponentName) return [];
+    const oppKey = normalizePlayerKey(opponentName);
+    const wantDoubles = type === 'doubles';
+    return (player.matchDetails || []).filter(m => {
+        if (!!m.isDoubles !== wantDoubles) return false;
+        if (seasonOrder !== null && getSeasonOrder(m.season) !== seasonOrder) return false;
+        return String(m.opponent || '').split('/').some(n => normalizePlayerKey(n) === oppKey);
+    });
+}
+
+// Chance (in %) to win a best-of-5 match. winProb() is the per-set probability.
+function getMatchWinChance(ratingA, ratingB) {
+    const dist = getScoreDistribution(winProb(ratingA, ratingB));
+    return dist['3-0'] + dist['3-1'] + dist['3-2'];
+}
+
+// "Iveta SOLČANIOVÁ" -> { first: 'Iveta', last: 'SOLČANIOVÁ' } (surname is the upper-case tail).
+function splitPlayerName(full) {
+    const tokens = String(full || '').trim().split(/\s+/).filter(Boolean);
+    if (tokens.length <= 1) return { first: '', last: tokens[0] || '' };
+    const isUpper = (t) => t === t.toUpperCase() && t !== t.toLowerCase();
+    let i = tokens.length;
+    while (i > 1 && isUpper(tokens[i - 1])) i--;
+    if (i === tokens.length) i = tokens.length - 1;
+    return { first: tokens.slice(0, i).join(' '), last: tokens.slice(i).join(' ') };
+}
+
+const titleCaseName = (s) => String(s || '').toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+// Short labels for a set of names; adds the first initial when two surnames collide.
+function shortPlayerNames(names) {
+    const parts = names.map(n => splitPlayerName(n));
+    const counts = new Map();
+    parts.forEach(p => counts.set(p.last.toLowerCase(), (counts.get(p.last.toLowerCase()) || 0) + 1));
+    return parts.map(p => {
+        const base = titleCaseName(p.last);
+        return counts.get(p.last.toLowerCase()) > 1 && p.first ? `${base} ${p.first[0]}.` : base;
+    });
+}
+
+function formatH2HDate(raw) {
+    const d = parseMatchDate(raw);
+    return d ? `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}` : '';
+}
+
+// "10 kolo" -> "10. kolo", "15 kolo (Dohrávky) kolo" -> "15. kolo (Dohrávky)"
+function formatH2HRound(round) {
+    return String(round || '').trim()
+        .replace(/^(\d+)\s+kolo/i, '$1. kolo')
+        .replace(/\)\s*kolo$/i, ')');
+}
+
+// Team matches: every played row grouped into one entry per (season, round, home, away).
+function groupTeamMatches(matches) {
+    const groups = new Map();
+    (matches || []).forEach(m => {
+        const home = canonicalTeamName(m.player_a_team);
+        const away = canonicalTeamName(m.player_b_team);
+        if (!home || !away) return;
+        const homeKey = normalizeTeamKey(home);
+        const awayKey = normalizeTeamKey(away);
+        const key = `${m.season || ''}__${m.round}__${homeKey}__${awayKey}`;
+        let g = groups.get(key);
+        if (!g) {
+            g = {
+                season: m.season || '', seasonOrder: getSeasonOrder(m.season), round: m.round,
+                home, away, homeKey, awayKey,
+                winsHome: 0, winsAway: 0, setsHome: 0, setsAway: 0, date: m.date || '', matches: []
+            };
+            groups.set(key, g);
+        }
+        if (m.date && (!g.date || m.date < g.date)) g.date = m.date;
+        const sa = parseInt(m.score_a, 10) || 0;
+        const sb = parseInt(m.score_b, 10) || 0;
+        if (sa > sb) g.winsHome++;
+        else if (sb > sa) g.winsAway++;
+        g.setsHome += sa;
+        g.setsAway += sb;
+        g.matches.push(m);
+    });
+    return [...groups.values()].sort((x, y) =>
+        (x.seasonOrder - y.seasonOrder)
+        || String(x.date).localeCompare(String(y.date))
+        || (getRoundSortValueFromStr(x.round) - getRoundSortValueFromStr(y.round)));
+}
+
+function renderH2HPage() {
+    const root = document.getElementById('h2hRoot');
+    if (!root) return;
+
+    const COLOR_A = '#3b82f6';
+    const COLOR_B = '#fb7185';
+
+    const {players} = processData();
+    const playedMatches = (window.matchResults || []).filter(isPlayedMatch);
+
+    // ---- Data lookups -------------------------------------------------------
+    const playerList = Object.values(players).filter(p => p.name && hasPlayed(p));
+    const playerByKey = new Map(playerList.map(p => [normalizePlayerKey(p.name), p]));
+    const playerNames = playerList.map(p => p.name).sort((x, y) => x.localeCompare(y, 'sk', {sensitivity: 'base'}));
+    const datalist = document.getElementById('h2hPlayersList');
+    if (datalist) datalist.innerHTML = playerNames.map(n => `<option value="${escapeAttr(n)}"></option>`).join('');
+
+    const teamNameSet = new Set();
+    playedMatches.forEach(m => [m.player_a_team, m.player_b_team].forEach(t => {
+        if (t && t !== 'N/A' && t !== 'WO') teamNameSet.add(canonicalTeamName(t));
+    }));
+    const teamNames = [...teamNameSet].sort((x, y) => x.localeCompare(y, 'sk', {sensitivity: 'base'}));
+    const teamGroups = groupTeamMatches(playedMatches);
+
+    let currentSeasonName = null;
+    playedMatches.forEach(m => {
+        if (m.season && (currentSeasonName === null || getSeasonOrder(m.season) > getSeasonOrder(currentSeasonName))) {
+            currentSeasonName = m.season;
+        }
+    });
+    const currentSeasonOrder = currentSeasonName ? getSeasonOrder(currentSeasonName) : null;
+
+    const foldText = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const resolvePlayer = (name) => {
+        const exact = playerByKey.get(normalizePlayerKey(name))?.name;
+        if (exact) return exact;
+        // "Zarik" -> "Marian ZÁRIK" when the folded text names exactly one player
+        const folded = foldText(name);
+        if (!folded) return null;
+        const exactHits = playerNames.filter(n => foldText(n) === folded);
+        if (exactHits.length === 1) return exactHits[0];
+        const partialHits = playerNames.filter(n => foldText(n).includes(folded));
+        return partialHits.length === 1 ? partialHits[0] : null;
+    };
+    const resolveTeam = (name) => teamNames.find(t => normalizeTeamKey(t) === normalizeTeamKey(name)) || null;
+
+    // ---- State (URL first, then sensible defaults) ---------------------------
+    const params = new URLSearchParams(window.location.search);
+    const state = {
+        mode: params.get('mode') === 'teams' ? 'teams' : 'players',
+        season: params.get('season') === 'current' && currentSeasonOrder !== null ? 'current' : 'all',
+        type: params.get('type') === 'doubles' ? 'doubles' : 'singles',
+        pa: null, pb: null, ta: null, tb: null
+    };
+    if (state.mode === 'players') {
+        state.pa = resolvePlayer(params.get('a'));
+        state.pb = resolvePlayer(params.get('b'));
+    } else {
+        state.ta = resolveTeam(params.get('a'));
+        state.tb = resolveTeam(params.get('b'));
+    }
+
+    const mostPlayedOpponent = (player) => {
+        const counts = new Map();
+        (player?.matchDetails || []).forEach(m => {
+            if (m.isDoubles) return;
+            const k = normalizePlayerKey(m.opponent);
+            if (playerByKey.has(k)) counts.set(k, (counts.get(k) || 0) + 1);
+        });
+        let best = null;
+        counts.forEach((c, k) => { if (!best || c > best.c) best = {k, c}; });
+        return best ? playerByKey.get(best.k).name : null;
+    };
+    const mostPlayedOpponentTeam = (teamName) => {
+        const key = normalizeTeamKey(teamName);
+        const counts = new Map();
+        teamGroups.forEach(g => {
+            if (g.homeKey === key) counts.set(g.away, (counts.get(g.away) || 0) + 1);
+            else if (g.awayKey === key) counts.set(g.home, (counts.get(g.home) || 0) + 1);
+        });
+        let best = null;
+        counts.forEach((c, t) => { if (!best || c > best.c) best = {t, c}; });
+        return best ? best.t : null;
+    };
+
+    const topRated = [...playerList].sort((x, y) => y.rating - x.rating);
+    const ensureDefaults = () => {
+        if (!state.pa || !playerByKey.has(normalizePlayerKey(state.pa))) {
+            state.pa = resolvePlayer(localStorage.getItem(MYSTATS_STORAGE_KEY)) || topRated[0]?.name || null;
+        }
+        if (!state.pb || normalizePlayerKey(state.pb) === normalizePlayerKey(state.pa)) {
+            state.pb = mostPlayedOpponent(playerByKey.get(normalizePlayerKey(state.pa)))
+                || topRated.find(p => normalizePlayerKey(p.name) !== normalizePlayerKey(state.pa))?.name || null;
+        }
+        if (!state.ta) {
+            const own = playerByKey.get(normalizePlayerKey(state.pa));
+            state.ta = resolveTeam(localStorage.getItem(MYTEAM_STORAGE_KEY))
+                || resolveTeam(own ? getCurrentTeamOfPlayer(own) : null) || teamNames[0] || null;
+        }
+        if (!state.tb || normalizeTeamKey(state.tb) === normalizeTeamKey(state.ta)) {
+            state.tb = mostPlayedOpponentTeam(state.ta) || teamNames.find(t => normalizeTeamKey(t) !== normalizeTeamKey(state.ta)) || null;
+        }
+    };
+    ensureDefaults();
+
+    // ---- Small view helpers --------------------------------------------------
+    const seasonOrderFilter = () => (state.season === 'current' ? currentSeasonOrder : null);
+    const teamLogoHtml = (team) => {
+        const src = getTeamLogoSrc(team);
+        return src
+            ? `<span class="h2h-logo"><img src="${escapeAttr(src)}" alt="" loading="lazy"></span>`
+            : `<span class="h2h-logo">${escapeHtml(String(team || '').slice(0, 3).toUpperCase())}</span>`;
+    };
+    const formDots = (results) => results.length
+        ? `<span class="h2h-form">${results.map(r => `<b class="${r}" title="${r === 'W' ? 'Výhra' : r === 'L' ? 'Prehra' : 'Remíza'}"></b>`).join('')}</span>`
+        : '–';
+    const num = (v) => (Number.isFinite(v) ? String(Math.round(v)) : '–');
+    const pct = (v) => (Number.isFinite(v) ? `${Math.round(v)} %` : '–');
+    // Class for the better of two values in a comparison row.
+    const bestClass = (a, b, higher = true) => {
+        if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return ['', ''];
+        const aBetter = higher ? a > b : a < b;
+        return aBetter ? ['is-better', ''] : ['', 'is-better'];
+    };
+    const compareRow = (label, valA, valB, clsA = '', clsB = '') =>
+        `<tr><td class="va ${clsA}">${valA}</td><td class="k">${label}</td><td class="vb ${clsB}">${valB}</td></tr>`;
+
+    const duelHtml = ({sideA, sideB, midLabel, score, sub, shareA}) => `
+        <section class="h2h-duel">
+            ${sideA}
+            <div class="h2h-mid">
+                <span class="h2h-mid__label">${midLabel}</span>
+                <div class="h2h-score">${score[0]}<i>:</i>${score[1]}</div>
+                <div class="h2h-mid__sub">${sub}</div>
+                <button type="button" class="h2h-swap" id="h2hSwap">⇄ Vymeniť</button>
+            </div>
+            ${sideB}
+        </section>
+        <div class="h2h-bar" aria-hidden="true"><span style="width:${shareA}%"></span></div>`;
+
+    const probHtml = (chanceA) => `
+        <div class="h2h-prob">
+            <div class="h2h-prob__a" style="width:${chanceA.toFixed(1)}%">${Math.round(chanceA)} %</div>
+            <div class="h2h-prob__b">${Math.round(100 - chanceA)} %</div>
+        </div>`;
+
+    const findNextFixture = (teamA, teamB) => {
+        const ka = normalizeTeamKey(teamA), kb = normalizeTeamKey(teamB);
+        if (!ka || !kb || ka === kb) return null;
+        const upcoming = (window.matchResults || []).filter(m => {
+            if (isPlayedMatch(m)) return false;
+            const x = normalizeTeamKey(m.player_a_team), y = normalizeTeamKey(m.player_b_team);
+            return (x === ka && y === kb) || (x === kb && y === ka);
+        }).sort((x, y) => String(x.date || '9999').localeCompare(String(y.date || '9999')));
+        return upcoming[0] || null;
+    };
+    const fixtureHtml = (fixture) => {
+        if (!fixture) return '<p class="h2h-note">Ďalšie stretnutie týchto tímov nie je v rozpise.</p>';
+        const when = formatH2HDate(fixture.date);
+        const time = (String(fixture.date || '').match(/\d{2}:\d{2}$/) || [''])[0];
+        return `<p class="h2h-fixture"><b>${escapeHtml(fixture.season || '')} · ${escapeHtml(formatH2HRound(fixture.round))}</b>`
+            + `${when ? ` · ${when}${time ? `, ${time}` : ''}` : ''} · doma <b>${escapeHtml(canonicalTeamName(fixture.player_a_team))}</b></p>`;
+    };
+
+    // ---- Players view --------------------------------------------------------
+    let chart = null;
+    let chartToken = 0;
+    const destroyChart = () => { chartToken++; if (chart) { chart.destroy(); chart = null; } };
+
+    const drawRatingChart = (pa, pb, meetings, seasonOrder) => {
+        const canvas = document.getElementById('h2hChart');
+        if (!canvas) return;
+        if (typeof Chart === 'undefined') {
+            canvas.parentElement.innerHTML = '<p class="h2h-note">Graf sa nepodarilo načítať.</p>';
+            return;
+        }
+        let keys = [...new Set([...Object.keys(pa.history || {}), ...Object.keys(pb.history || {})])].sort();
+        if (seasonOrder !== null) keys = keys.filter(k => k.startsWith(`${seasonOrder}-`));
+        if (keys.length < 2) {
+            canvas.parentElement.innerHTML = '<p class="h2h-note">Zatiaľ nie je dosť dát na graf.</p>';
+            return;
+        }
+        const labels = keys.map(k => {
+            const lab = k.split('|').slice(1).join('|');
+            const mm = lab.match(/^(.*?)\s*\(([^()]+)\)$/);
+            return mm ? [formatH2HRound(mm[1]), mm[2]] : [formatH2HRound(lab)];
+        });
+        const series = (p) => {
+            let last = null;
+            return keys.map(k => {
+                if (p.history[k] !== undefined) last = p.history[k];
+                return last;
+            });
+        };
+        const meetingKeys = new Set(meetings.map(m =>
+            `${getSeasonOrder(m.season)}-${String(getRoundOrderFromStr(m.round)).padStart(4, '0')}|${m.round}${m.season ? ` (${m.season})` : ''}`));
+        const radii = keys.map(k => (meetingKeys.has(k) ? 6 : 0));
+        const dataset = (p, color) => ({
+            label: splitPlayerName(p.name).last ? titleCaseName(splitPlayerName(p.name).last) : p.name,
+            data: series(p), borderColor: color, backgroundColor: color, borderWidth: 3, tension: 0.15,
+            pointRadius: radii, pointHoverRadius: 6, pointBackgroundColor: '#2c3e63', pointBorderColor: '#fff', pointBorderWidth: 2
+        });
+        Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+        chart = new Chart(canvas, {
+            type: 'line',
+            data: {labels, datasets: [dataset(pa, COLOR_A), dataset(pb, COLOR_B)]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: {mode: 'index', intersect: false},
+                plugins: {
+                    legend: {display: false},
+                    tooltip: {callbacks: {
+                        title: (items) => (Array.isArray(labels[items[0].dataIndex]) ? labels[items[0].dataIndex].join(' · ') : labels[items[0].dataIndex]),
+                        label: (ctx) => `${ctx.dataset.label}: ${Math.round(ctx.parsed.y)}`
+                    }}
+                },
+                scales: {
+                    x: {grid: {display: false}, ticks: {maxTicksLimit: 6, maxRotation: 0, autoSkip: true}},
+                    y: {ticks: {callback: (v) => Math.round(v)}}
+                }
+            }
+        });
+    };
+
+    const renderPlayersView = () => {
+        const pa = playerByKey.get(normalizePlayerKey(state.pa));
+        const pb = playerByKey.get(normalizePlayerKey(state.pb));
+        if (!pa || !pb) {
+            root.innerHTML = '<div class="h2h-card"><p class="h2h-note">Nie sú dostupné dáta hráčov.</p></div>';
+            return;
+        }
+        const seasonOrder = seasonOrderFilter();
+        const meetings = getHeadToHeadMeetings(pa, pb.name, {type: state.type, seasonOrder});
+
+        let winsA = 0, winsB = 0, setsA = 0, setsB = 0;
+        meetings.forEach(m => {
+            if (m.score_own > m.score_opp) winsA++; else winsB++;
+            setsA += m.score_own;
+            setsB += m.score_opp;
+        });
+
+        const side = (cls, p) => {
+            const {first, last} = splitPlayerName(p.name);
+            const team = getCurrentTeamOfPlayer(p) || p.team || '';
+            return `<div class="h2h-side h2h-side--${cls}">
+                <input class="h2h-pick" data-side="${cls}" list="h2hPlayersList" placeholder="Zmeniť hráča ▾" aria-label="Zmeniť hráča ${cls === 'a' ? 'vľavo' : 'vpravo'}" autocomplete="off">
+                <div class="h2h-first">${escapeHtml(first) || '&nbsp;'}</div>
+                <div class="h2h-last">${escapeHtml(last)}</div>
+                <div class="h2h-meta">${team ? teamLogoHtml(team) : ''}<span class="h2h-meta__team">${escapeHtml(team)}</span><span class="h2h-rating">${num(p.rating)}</span></div>
+            </div>`;
+        };
+
+        // Comparison (singles, scoped to the chosen season)
+        const sumOf = (p) => {
+            const log = (p.matchDetails || []).filter(m => !m.isDoubles && (seasonOrder === null || getSeasonOrder(m.season) === seasonOrder));
+            let wins = 0, streak = 0, bestStreak = 0;
+            log.forEach(m => {
+                if (m.score_own > m.score_opp) { wins++; streak++; bestStreak = Math.max(bestStreak, streak); } else streak = 0;
+            });
+            return {matches: log.length, wins, winPct: log.length ? wins / log.length * 100 : NaN, bestStreak,
+                form: log.slice(-5).map(m => (m.score_own > m.score_opp ? 'W' : 'L'))};
+        };
+        const sa = sumOf(pa), sb = sumOf(pb);
+        const rows = [];
+        let c = bestClass(pa.rating, pb.rating);
+        rows.push(compareRow('Rating', num(pa.rating), num(pb.rating), c[0], c[1]));
+        c = bestClass(sa.winPct, sb.winPct);
+        rows.push(compareRow('Úspešnosť', pct(sa.winPct), pct(sb.winPct), c[0], c[1]));
+        c = bestClass(sa.matches, sb.matches);
+        rows.push(compareRow('Zápasy', sa.matches, sb.matches, c[0], c[1]));
+        rows.push(compareRow('Forma', formDots(sa.form), formDots(sb.form)));
+        c = bestClass(sa.bestStreak, sb.bestStreak);
+        rows.push(compareRow('Najdlhšia séria', sa.bestStreak, sb.bestStreak, c[0], c[1]));
+        c = bestClass(pa.maxRating, pb.maxRating);
+        rows.push(compareRow('Max rating', num(pa.maxRating), num(pb.maxRating), c[0], c[1]));
+
+        const chanceA = getMatchWinChance(pa.rating, pb.rating);
+        const teamA = getCurrentTeamOfPlayer(pa), teamB = getCurrentTeamOfPlayer(pb);
+        const fixture = findNextFixture(teamA, teamB);
+
+        // Meetings list
+        const doubles = state.type === 'doubles';
+        const names = doubles ? null : shortPlayerNames([pa.name, pb.name]);
+        const list = [...meetings].reverse().map(m => {
+            const win = m.score_own > m.score_opp;
+            const left = doubles ? m.own_name_display : names[0];
+            const right = doubles ? m.opponent : names[1];
+            const when = formatH2HDate(m.date);
+            return `<div class="h2h-row">
+                <span class="h2h-row__when">${escapeHtml(when || formatH2HRound(m.round))}<br>${escapeHtml(formatH2HRound(m.round))}${m.season ? ` · ${escapeHtml(m.season)}` : ''}</span>
+                <span class="h2h-row__a">${escapeHtml(left)}</span>
+                <span class="h2h-row__score ${win ? 'is-a' : 'is-b'}">${m.score_own} : ${m.score_opp}</span>
+                <span class="h2h-row__b">${escapeHtml(right)}</span>
+            </div>`;
+        }).join('');
+
+        destroyChart();
+        document.querySelectorAll('.search-suggest').forEach(el => el.remove());
+        root.innerHTML = `
+            ${duelHtml({
+                sideA: side('a', pa), sideB: side('b', pb),
+                midLabel: doubles ? 'Výhry · štvorhra' : 'Výhry',
+                score: [winsA, winsB], sub: `Sety ${setsA} : ${setsB}`,
+                shareA: meetings.length ? (winsA / meetings.length * 100) : 50
+            })}
+            <div class="h2h-grid">
+                <section class="h2h-card">
+                    <h2>Šanca v ďalšom zápase</h2>
+                    ${probHtml(chanceA)}
+                    <p class="h2h-note">Dvojhra podľa aktuálneho ratingu (rozdiel ${Math.abs(Math.round(pa.rating - pb.rating))} bodov).</p>
+                    ${teamA && teamB && normalizeTeamKey(teamA) !== normalizeTeamKey(teamB) ? fixtureHtml(fixture) : ''}
+                    <h2 class="h2h-card__sub">Porovnanie</h2>
+                    <table class="h2h-compare">${rows.join('')}</table>
+                    <p class="h2h-note">Dvojhra${seasonOrder !== null ? `, ${escapeHtml(currentSeasonName)}` : ', všetky sezóny'}.</p>
+                </section>
+                <section class="h2h-card">
+                    <h2>Vývoj ratingu</h2>
+                    <div class="h2h-legend">
+                        <span style="color:${COLOR_A}">${escapeHtml(titleCaseName(splitPlayerName(pa.name).last))}</span>
+                        <span style="color:${COLOR_B}">${escapeHtml(titleCaseName(splitPlayerName(pb.name).last))}</span>
+                        <span class="h2h-legend__dot">● vzájomný zápas</span>
+                    </div>
+                    <div class="h2h-chart"><canvas id="h2hChart"></canvas></div>
+                </section>
+                <section class="h2h-card h2h-card--full">
+                    <h2>Vzájomné zápasy</h2>
+                    ${list || `<p class="h2h-note">${doubles ? 'Títo hráči sa zatiaľ nestretli v štvorhre.' : 'Títo hráči sa zatiaľ nestretli v dvojhre.'}</p>`}
+                </section>
+            </div>`;
+        // The first render runs while the page loader still hides the content (0x0 canvas),
+        // so let the browser lay the page out before Chart.js measures it.
+        const token = chartToken;
+        setTimeout(() => { if (token === chartToken) drawRatingChart(pa, pb, meetings, seasonOrder); }, 0);
+    };
+
+    // ---- Teams view ----------------------------------------------------------
+    const teamActiveRating = (teamName) => {
+        const key = normalizeTeamKey(teamName);
+        const derived = Object.values(players).filter(p => normalizeTeamKey(p.team) === key);
+        const squad = getSeasonTeamPlayers(teamName, getCurrentRosterSeason(), derived, players).filter(hasPlayed);
+        const top = sortRoster(squad).slice(0, 4);
+        return top.length ? avgRating(top) : NaN;
+    };
+
+    const renderTeamsView = () => {
+        if (!state.ta || !state.tb) {
+            root.innerHTML = '<div class="h2h-card"><p class="h2h-note">Nie sú dostupné dáta tímov.</p></div>';
+            return;
+        }
+        const ka = normalizeTeamKey(state.ta), kb = normalizeTeamKey(state.tb);
+        const seasonOrder = seasonOrderFilter();
+        const inScope = (g) => seasonOrder === null || g.seasonOrder === seasonOrder;
+        const pair = teamGroups.filter(g => inScope(g)
+            && ((g.homeKey === ka && g.awayKey === kb) || (g.homeKey === kb && g.awayKey === ka)));
+
+        // Totals from team A's point of view
+        let winsA = 0, winsB = 0, draws = 0, matchesA = 0, matchesB = 0, setsA = 0, setsB = 0;
+        const meetings = pair.map(g => {
+            const aHome = g.homeKey === ka;
+            const r = {
+                g, aHome,
+                a: aHome ? g.winsHome : g.winsAway, b: aHome ? g.winsAway : g.winsHome,
+                sa: aHome ? g.setsHome : g.setsAway, sb: aHome ? g.setsAway : g.setsHome
+            };
+            if (r.a > r.b) winsA++; else if (r.b > r.a) winsB++; else draws++;
+            matchesA += r.a; matchesB += r.b; setsA += r.sa; setsB += r.sb;
+            return r;
+        });
+
+        // Player vs player grid (singles) in team A rows x team B columns
+        const cell = new Map();
+        const rowTot = new Map(), colTot = new Map();
+        pair.forEach(g => g.matches.forEach(m => {
+            if (m.doubles) return;
+            const aIsHome = normalizeTeamKey(m.player_a_team) === ka;
+            const pA = aIsHome ? m.player_a : m.player_b;
+            const pB = aIsHome ? m.player_b : m.player_a;
+            const sA = parseInt(aIsHome ? m.score_a : m.score_b, 10) || 0;
+            const sB = parseInt(aIsHome ? m.score_b : m.score_a, 10) || 0;
+            const key = `${pA}\u0001${pB}`;
+            const cur = cell.get(key) || {a: pA, b: pB, w: 0, l: 0};
+            if (sA > sB) cur.w++; else cur.l++;
+            cell.set(key, cur);
+            const r = rowTot.get(pA) || {w: 0, l: 0}; if (sA > sB) r.w++; else r.l++; rowTot.set(pA, r);
+            const k = colTot.get(pB) || {w: 0, l: 0}; if (sA > sB) k.w++; else k.l++; colTot.set(pB, k);
+        }));
+        const activity = (tot, name) => { const t = tot.get(name); return t ? t.w + t.l : 0; };
+        const rowNames = [...rowTot.keys()].sort((x, y) => (rowTot.get(y).w - rowTot.get(x).w) || (activity(rowTot, y) - activity(rowTot, x)) || x.localeCompare(y, 'sk'));
+        const colNames = [...colTot.keys()].sort((x, y) => (colTot.get(x).w - colTot.get(y).w) || (activity(colTot, y) - activity(colTot, x)) || x.localeCompare(y, 'sk'));
+        const rowShort = shortPlayerNames(rowNames), colShort = shortPlayerNames(colNames);
+
+        let gridHtml;
+        if (rowNames.length === 0) {
+            gridHtml = '<p class="h2h-note">Zatiaľ žiadne zápasy hráčov týchto tímov v dvojhre.</p>';
+        } else {
+            const head = `<tr><th></th>${colNames.map((n, i) => `<th class="cb" title="${escapeAttr(n)}"><span>${escapeHtml(colShort[i])}</span></th>`).join('')}<th class="cb tot"><span>Spolu</span></th></tr>`;
+            const body = rowNames.map((rn, ri) => {
+                const cells = colNames.map(cn => {
+                    const v = cell.get(`${rn}\u0001${cn}`);
+                    if (!v) return '<td class="c n">–</td>';
+                    const cls = v.w > v.l ? 'wa' : v.l > v.w ? 'wb' : 'eq';
+                    return `<td class="c ${cls}" data-a="${escapeAttr(rn)}" data-b="${escapeAttr(cn)}" title="${escapeAttr(`${rn} – ${cn}`)}">${v.w}:${v.l}</td>`;
+                }).join('');
+                const t = rowTot.get(rn);
+                return `<tr><th class="ra" title="${escapeAttr(rn)}">${escapeHtml(rowShort[ri])}</th>${cells}<td class="c tot">${t.w}:${t.l}</td></tr>`;
+            }).join('');
+            const foot = `<tr><th class="ra tot">Spolu</th>${colNames.map(cn => { const t = colTot.get(cn); return `<td class="c tot">${t.w}:${t.l}</td>`; }).join('')}<td></td></tr>`;
+            gridHtml = `<div class="h2h-scroll"><table class="h2h-grid-table">${head}${body}${foot}</table></div>`;
+        }
+
+        // Best player of each side in this rivalry
+        const bestOf = (tot, names) => {
+            const sorted = [...names].sort((x, y) => (tot.get(y).w - tot.get(x).w) || (tot.get(x).l - tot.get(y).l));
+            if (!sorted.length) return '–';
+            const n = sorted[0], t = tot.get(n);
+            return `${escapeHtml(titleCaseName(splitPlayerName(n).last))} ${t.w}:${t.l}`;
+        };
+        // For team B the column totals are team A's record, so flip them.
+        const flipped = new Map(colNames.map(n => [n, {w: colTot.get(n).l, l: colTot.get(n).w}]));
+
+        // Team form and success across every opponent in scope
+        const teamLog = (key) => teamGroups.filter(g => inScope(g) && (g.homeKey === key || g.awayKey === key)).map(g => {
+            const own = g.homeKey === key ? g.winsHome : g.winsAway;
+            const opp = g.homeKey === key ? g.winsAway : g.winsHome;
+            return own > opp ? 'W' : own < opp ? 'L' : 'D';
+        });
+        const logA = teamLog(ka), logB = teamLog(kb);
+        const rate = (log) => (log.length ? log.filter(r => r === 'W').length / log.length * 100 : NaN);
+        const ratingA = teamActiveRating(state.ta), ratingB = teamActiveRating(state.tb);
+
+        const rows = [];
+        let c = bestClass(ratingA, ratingB);
+        rows.push(compareRow('Ø rating zostavy', num(ratingA), num(ratingB), c[0], c[1]));
+        c = bestClass(rate(logA), rate(logB));
+        rows.push(compareRow('Úspešnosť stretnutí', pct(rate(logA)), pct(rate(logB)), c[0], c[1]));
+        rows.push(compareRow('Forma tímu', formDots(logA.slice(-5)), formDots(logB.slice(-5))));
+        rows.push(compareRow('Najlepší v sérii', bestOf(rowTot, rowNames), bestOf(flipped, colNames)));
+
+        const chanceA = Number.isFinite(ratingA) && Number.isFinite(ratingB) ? getMatchWinChance(ratingA, ratingB) : 50;
+        const fixture = findNextFixture(state.ta, state.tb);
+
+        const side = (cls, team, rating) => `<div class="h2h-side h2h-side--${cls} h2h-side--team">
+            <select class="h2h-pick" data-side="${cls}" aria-label="Zmeniť tím ${cls === 'a' ? 'vľavo' : 'vpravo'}">
+                <option value="">Zmeniť tím ▾</option>
+                ${teamNames.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('')}
+            </select>
+            <div class="h2h-logo h2h-logo--big">${getTeamLogoSrc(team) ? `<img src="${escapeAttr(getTeamLogoSrc(team))}" alt="${escapeAttr(team)}">` : escapeHtml(team.slice(0, 3).toUpperCase())}</div>
+            <div class="h2h-last">${escapeHtml(team)}</div>
+            <div class="h2h-meta"><span class="h2h-meta__team">Ø rating</span><span class="h2h-rating">${num(rating)}</span></div>
+        </div>`;
+
+        const list = [...meetings].reverse().map(r => {
+            const win = r.a > r.b;
+            const draw = r.a === r.b;
+            const home = (name) => `${escapeHtml(name)}<span class="h2h-home">DOMA</span>`;
+            return `<div class="h2h-row h2h-row--team">
+                <span class="h2h-row__when">${escapeHtml(formatH2HDate(r.g.date))}<br>${escapeHtml(formatH2HRound(r.g.round))}${r.g.season ? ` · ${escapeHtml(r.g.season)}` : ''}</span>
+                <span class="h2h-row__a">${r.aHome ? home(state.ta) : escapeHtml(state.ta)}</span>
+                <span class="h2h-row__score ${draw ? '' : win ? 'is-a' : 'is-b'}">${r.a} : ${r.b}</span>
+                <span class="h2h-row__b">${r.aHome ? escapeHtml(state.tb) : home(state.tb)}</span>
+                <span class="h2h-row__sets">sety ${r.sa}:${r.sb}</span>
+            </div>`;
+        }).join('');
+
+        destroyChart();
+        document.querySelectorAll('.search-suggest').forEach(el => el.remove());
+        root.innerHTML = `
+            ${duelHtml({
+                sideA: side('a', state.ta, ratingA), sideB: side('b', state.tb, ratingB),
+                midLabel: 'Stretnutia',
+                score: [winsA, winsB],
+                sub: `Zápasy ${matchesA} : ${matchesB}<br>Sety ${setsA} : ${setsB}${draws ? `<br>Remízy ${draws}` : ''}`,
+                shareA: matchesA + matchesB ? matchesA / (matchesA + matchesB) * 100 : 50
+            })}
+            <div class="h2h-grid">
+                <section class="h2h-card">
+                    <h2>Ďalšie stretnutie</h2>
+                    ${fixtureHtml(fixture)}
+                    ${probHtml(chanceA)}
+                    <p class="h2h-note">Očakávaný podiel vyhraných zápasov podľa Ø ratingu 4 najaktívnejších hráčov.</p>
+                    <h2 class="h2h-card__sub">Porovnanie</h2>
+                    <table class="h2h-compare">${rows.join('')}</table>
+                </section>
+                <section class="h2h-card">
+                    <h2>Hráč proti hráčovi</h2>
+                    <p class="h2h-note">Dvojhra, riadky ${escapeHtml(state.ta)}, stĺpce ${escapeHtml(state.tb)}. Hodnoty sú výhry:prehry hráča z riadku. Klik na bunku otvorí porovnanie hráčov.</p>
+                    ${gridHtml}
+                </section>
+                <section class="h2h-card h2h-card--full">
+                    <h2>Stretnutia tímov</h2>
+                    ${list || '<p class="h2h-note">Tieto tímy sa zatiaľ nestretli.</p>'}
+                </section>
+            </div>`;
+        // Reflect the current teams in the (native) pickers
+        root.querySelectorAll('select.h2h-pick').forEach(sel => { sel.value = ''; });
+    };
+
+    // ---- Controls, URL, events -----------------------------------------------
+    const syncControls = () => {
+        document.body.dataset.h2hMode = state.mode;
+        document.querySelectorAll('#h2hModeSeg button').forEach(b => {
+            b.classList.toggle('is-active', b.dataset.mode === state.mode);
+            b.setAttribute('aria-selected', String(b.dataset.mode === state.mode));
+        });
+        document.querySelectorAll('#h2hSeasonSeg button').forEach(b => b.classList.toggle('is-active', b.dataset.season === state.season));
+        document.querySelectorAll('#h2hTypeSeg button').forEach(b => b.classList.toggle('is-active', b.dataset.type === state.type));
+        const curBtn = document.getElementById('h2hCurrentSeasonBtn');
+        if (curBtn) {
+            curBtn.hidden = currentSeasonOrder === null;
+            if (currentSeasonName) curBtn.textContent = currentSeasonName;
+        }
+    };
+
+    const updateUrl = () => {
+        const p = new URLSearchParams();
+        p.set('mode', state.mode);
+        const a = state.mode === 'teams' ? state.ta : state.pa;
+        const b = state.mode === 'teams' ? state.tb : state.pb;
+        if (a) p.set('a', a);
+        if (b) p.set('b', b);
+        if (state.season !== 'all') p.set('season', state.season);
+        if (state.mode === 'players' && state.type !== 'singles') p.set('type', state.type);
+        try { history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); } catch (e) { /* ignore */ }
+    };
+
+    const render = () => {
+        syncControls();
+        if (state.mode === 'teams') renderTeamsView(); else renderPlayersView();
+        updateUrl();
+    };
+
+    document.getElementById('h2hModeSeg')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-mode]');
+        if (!btn || btn.dataset.mode === state.mode) return;
+        state.mode = btn.dataset.mode;
+        render();
+    });
+    document.getElementById('h2hSeasonSeg')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-season]');
+        if (!btn || btn.dataset.season === state.season) return;
+        state.season = btn.dataset.season;
+        render();
+    });
+    document.getElementById('h2hTypeSeg')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-type]');
+        if (!btn || btn.dataset.type === state.type) return;
+        state.type = btn.dataset.type;
+        render();
+    });
+
+    // Delegated, so they survive every re-render of #h2hRoot.
+    root.addEventListener('click', (e) => {
+        if (e.target.closest('#h2hSwap')) {
+            if (state.mode === 'teams') [state.ta, state.tb] = [state.tb, state.ta];
+            else [state.pa, state.pb] = [state.pb, state.pa];
+            render();
+            return;
+        }
+        const cellEl = e.target.closest('td.c[data-a]');
+        if (cellEl) {
+            state.pa = resolvePlayer(cellEl.dataset.a) || state.pa;
+            state.pb = resolvePlayer(cellEl.dataset.b) || state.pb;
+            state.mode = 'players';
+            state.type = 'singles';
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            render();
+        }
+    });
+    root.addEventListener('change', (e) => {
+        const pick = e.target.closest('.h2h-pick');
+        if (!pick) return;
+        const sideA = pick.dataset.side === 'a';
+        if (state.mode === 'teams') {
+            const team = resolveTeam(pick.value);
+            if (!team) return;
+            const other = sideA ? state.tb : state.ta;
+            if (normalizeTeamKey(team) === normalizeTeamKey(other)) [state.ta, state.tb] = [state.tb, state.ta];
+            else if (sideA) state.ta = team; else state.tb = team;
+        } else {
+            const name = resolvePlayer(pick.value.trim());
+            if (!name) { pick.value = ''; return; }
+            const other = sideA ? state.pb : state.pa;
+            if (normalizePlayerKey(name) === normalizePlayerKey(other)) [state.pa, state.pb] = [state.pb, state.pa];
+            else if (sideA) state.pa = name; else state.pb = name;
+        }
+        render();
+    });
+
+    render();
+}
+
+// ============================================================
 // NAVIGATION RENDERER
 // ============================================================
 function renderNavigation() {
@@ -10308,6 +10996,7 @@ function renderNavigation() {
         { url: 'prediction.html', text: 'Predikcia' },
         { url: 'mystats.html', text: 'Moje Štatistiky' },
         { url: 'myteam.html', text: 'Môj Tím' },
+        { url: 'h2h.html', text: 'Vzájomne' },
         { url: 'highlights.html', text: 'Zaujímavosti' },
     ];
 
@@ -10446,6 +11135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         else if (id === 'page-mystats') renderMyStatsPage();
         else if (id === 'page-myteam') renderMyTeamPage();
         else if (id === 'page-highlights') renderHighlightsPage();
+        else if (id === 'page-h2h') renderH2HPage();
         hideLoader();
     });
 });

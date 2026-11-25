@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Cookie consent + Google Analytics (loaded only after consent) -->
+    <script src="cookie-consent.js"></script>
+    <title>Košická Miniliga - Vzájomné zápasy</title>
+    <meta name="description" content="Vzájomné zápasy hráčov a tímov Košickej Miniligy: bilancia, vývoj ratingu a odhad ďalšieho zápasu.">
+    <meta property="og:site_name" content="Košická Miniliga">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="sk_SK">
+    <meta property="og:title" content="Vzájomné zápasy | Košická Miniliga">
+    <meta property="og:description" content="Vzájomné zápasy hráčov a tímov Košickej Miniligy: bilancia, vývoj ratingu a odhad ďalšieho zápasu.">
+    <meta property="og:url" content="https://miniliga.sk/h2h.html">
+    <meta property="og:image" content="https://miniliga.sk/media/og-image.png?v=1">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Miniliga: Košická stolnotenisová liga">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Vzájomné zápasy | Košická Miniliga">
+    <meta name="twitter:description" content="Vzájomné zápasy hráčov a tímov Košickej Miniligy: bilancia, vývoj ratingu a odhad ďalšieho zápasu.">
+    <meta name="twitter:image" content="https://miniliga.sk/media/og-image.png?v=1">
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="styles/loader.css">
+    <link rel="preload" href="fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="styles/fonts.css?v=1">
+    <link rel="stylesheet" href="styles/shared.css?v=11">
+    <link rel="stylesheet" href="styles/sport.css?v=105">
+    <link rel="stylesheet" href="styles/sport-pages.css?v=303">
+    <link rel="stylesheet" href="styles/h2h.css?v=3">
+    <link rel="canonical" href="https://miniliga.sk/h2h.html" />
+</head>
+<body id="page-h2h" class="loading sport sport-pages">
+
+<div id="pageLoader" role="status" aria-live="polite">
+    <div class="loader">
+        <div class="loader-score" aria-hidden="true">
+            <div class="loader-digit is-a"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+            <div class="loader-colon"></div>
+            <div class="loader-digit is-b"><span><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></span></div>
+        </div>
+        <div class="loader-court" aria-hidden="true">
+            <div class="loader-ball-x"><div class="loader-ball-y"></div></div>
+        </div>
+        <div class="loading-text">Načítava sa</div>
+    </div>
+</div>
+<div id="pageContent">
+    <div id="mainNavContainer"></div>
+
+    <header class="page-hero">
+        <h1 class="page-hero__title">Vzájomne</h1>
+        <div class="page-hero__side">
+            <p class="page-hero__lead">Porovnajte dvoch hráčov alebo dva tímy.</p>
+        </div>
+    </header>
+
+    <div class="container page-container" id="mainContainer">
+        <div class="h2h-toolbar">
+            <div class="h2h-seg" id="h2hModeSeg" role="tablist" aria-label="Režim">
+                <button type="button" role="tab" data-mode="players">Hráči</button>
+                <button type="button" role="tab" data-mode="teams">Tímy</button>
+            </div>
+            <div class="h2h-filters">
+                <div class="h2h-seg h2h-seg--small" id="h2hSeasonSeg" aria-label="Sezóna">
+                    <button type="button" data-season="all">Všetky sezóny</button>
+                    <button type="button" data-season="current" id="h2hCurrentSeasonBtn">Aktuálna</button>
+                </div>
+                <div class="h2h-seg h2h-seg--small" id="h2hTypeSeg" aria-label="Typ zápasu">
+                    <button type="button" data-type="singles">Dvojhra</button>
+                    <button type="button" data-type="doubles">Štvorhra</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="h2hRoot"></div>
+        <datalist id="h2hPlayersList"></datalist>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3 class="footer-title">Košická Miniliga</h3>
+                <p class="footer-description">Výsledky, tabuľky a ratingy hráčov pre Košickú stolnotenisovú Miniligu. Toto je neoficiálna stránka. Oficiálne výsledky Miniligy nájdete na <a href="http://www.autrin.sk/miniligake_app.php?sport_id=1&amp;sutaz_id=1&amp;rocnik_id=4&amp;druzstvo_id=0&amp;kola_zobr=1" target="_blank" rel="noopener">autrin.sk</a>.</p>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-heading">Navigácia</h4>
+                <nav class="footer-nav">
+                    <a href="index.html" class="footer-link">Domov</a>
+                    <a href="results.html" class="footer-link">Výsledky</a>
+                    <a href="rating.html" class="footer-link">Rating</a>
+                    <a href="table.html" class="footer-link">Tabuľka</a>
+                    <a href="prediction.html" class="footer-link">Predikcie</a>
+                    <a href="h2h.html" class="footer-link">Vzájomne</a>
+                    <a href="highlights.html" class="footer-link">Zaujímavosti</a>
+                </nav>
+            </div>
+            <div class="footer-section">
+                <h4 class="footer-heading">O stránke</h4>
+                <p class="footer-text">Stolný tenis v Košiciach</p>
+                <p class="footer-text">Systém ratingov založený na ELO</p>
+                <p class="footer-text">Kontakty: <a href="mailto:info@miniliga.sk">info@miniliga.sk</a></p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="footer-copyright">&copy; <span id="currentYear"></span> miniliga.sk.</p>
+            <a href="cookies.html" class="footer-cookies-link">Nastavenia cookies</a>
+        </div>
+    </footer>
+</div>
+
+<script src="googleSheetsLoader.js?v=3"></script>
+<script src="seasonRosters.js?v=2"></script>
+<script src="matchData.js?v=8"></script>
+<script src="script.js?v=1022"></script>
+<script src="searchSuggest.js?v=1"></script>
+</body>
+</html>
