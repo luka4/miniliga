@@ -1988,7 +1988,9 @@ function replayAllMatches() {
                     sb.setsWin += scoreOwn;
                     sb.setsLose += scoreOpp;
                     if (scoreOwn > scoreOpp) { p.wins++; sb.wins++; } else if (scoreOpp > scoreOwn) { p.losses++; sb.losses++; }
-                    const oppRating = isDoubles ? 0 : players[oppNames[0]].rating;
+                    // Pre-match rating: side A is updated before side B, so reading
+                    // players[opp].rating here would give B the opponent's post-match value.
+                    const oppRating = oppRatingBeforeMatch;
                     if (scoreOwn > scoreOpp && oppRating > sb.bestWinRating) {
                         sb.bestWinOpponent = oppNames[0];
                         sb.bestWinRating = oppRating;
