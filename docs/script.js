@@ -10322,6 +10322,8 @@ function groupTeamMatches(matches) {
         || (getRoundSortValueFromStr(x.round) - getRoundSortValueFromStr(y.round)));
 }
 
+const isWalkoverName = (n) => /^\s*WO\s*$/i.test(String(n || ''));
+
 function renderH2HPage() {
     const root = document.getElementById('h2hRoot');
     if (!root) return;
@@ -10384,48 +10386,7 @@ function renderH2HPage() {
         state.tb = resolveTeam(params.get('b'));
     }
 
-    const mostPlayedOpponent = (player) => {
-        const counts = new Map();
-        (player?.matchDetails || []).forEach(m => {
-            if (m.isDoubles) return;
-            const k = normalizePlayerKey(m.opponent);
-            if (playerByKey.has(k)) counts.set(k, (counts.get(k) || 0) + 1);
-        });
-        let best = null;
-        counts.forEach((c, k) => { if (!best || c > best.c) best = {k, c}; });
-        return best ? playerByKey.get(best.k).name : null;
-    };
-    const mostPlayedOpponentTeam = (teamName) => {
-        const key = normalizeTeamKey(teamName);
-        const counts = new Map();
-        teamGroups.forEach(g => {
-            if (g.homeKey === key) counts.set(g.away, (counts.get(g.away) || 0) + 1);
-            else if (g.awayKey === key) counts.set(g.home, (counts.get(g.home) || 0) + 1);
-        });
-        let best = null;
-        counts.forEach((c, t) => { if (!best || c > best.c) best = {t, c}; });
-        return best ? best.t : null;
-    };
-
-    const topRated = [...playerList].sort((x, y) => y.rating - x.rating);
-    const ensureDefaults = () => {
-        if (!state.pa || !playerByKey.has(normalizePlayerKey(state.pa))) {
-            state.pa = resolvePlayer(localStorage.getItem(MYSTATS_STORAGE_KEY)) || topRated[0]?.name || null;
-        }
-        if (!state.pb || normalizePlayerKey(state.pb) === normalizePlayerKey(state.pa)) {
-            state.pb = mostPlayedOpponent(playerByKey.get(normalizePlayerKey(state.pa)))
-                || topRated.find(p => normalizePlayerKey(p.name) !== normalizePlayerKey(state.pa))?.name || null;
-        }
-        if (!state.ta) {
-            const own = playerByKey.get(normalizePlayerKey(state.pa));
-            state.ta = resolveTeam(localStorage.getItem(MYTEAM_STORAGE_KEY))
-                || resolveTeam(own ? getCurrentTeamOfPlayer(own) : null) || teamNames[0] || null;
-        }
-        if (!state.tb || normalizeTeamKey(state.tb) === normalizeTeamKey(state.ta)) {
-            state.tb = mostPlayedOpponentTeam(state.ta) || teamNames.find(t => normalizeTeamKey(t) !== normalizeTeamKey(state.ta)) || null;
-        }
-    };
-    ensureDefaults();
+    // No auto-picked defaults: the user chooses both sides (or arrives via URL).
 
     // ---- Small view helpers --------------------------------------------------
     const seasonOrderFilter = () => (state.season === 'current' ? currentSeasonOrder : null);
@@ -10547,10 +10508,33 @@ function renderH2HPage() {
     };
 
     const renderPlayersView = () => {
-        const pa = playerByKey.get(normalizePlayerKey(state.pa));
-        const pb = playerByKey.get(normalizePlayerKey(state.pb));
+        const pa = state.pa ? playerByKey.get(normalizePlayerKey(state.pa)) : null;
+        const pb = state.pb ? playerByKey.get(normalizePlayerKey(state.pb)) : null;
+        const side = (cls, p) => {
+            const label = cls === 'a' ? 'vľavo' : 'vpravo';
+            if (!p) {
+                return `<div class="h2h-side h2h-side--${cls} h2h-side--empty">
+                    <input class="h2h-pick" data-side="${cls}" list="h2hPlayersList" placeholder="Vybrať hráča ▾" aria-label="Vybrať hráča ${label}" autocomplete="off">
+                    <div class="h2h-last">Vyber hráča</div>
+                </div>`;
+            }
+            const {first, last} = splitPlayerName(p.name);
+            const team = getCurrentTeamOfPlayer(p) || p.team || '';
+            return `<div class="h2h-side h2h-side--${cls}">
+                <input class="h2h-pick" data-side="${cls}" list="h2hPlayersList" placeholder="Zmeniť hráča ▾" aria-label="Zmeniť hráča ${label}" autocomplete="off">
+                <div class="h2h-first">${escapeHtml(first) || '&nbsp;'}</div>
+                <div class="h2h-last">${escapeHtml(last)}</div>
+                <div class="h2h-meta">${team ? teamLogoHtml(team) : ''}<span class="h2h-meta__team">${escapeHtml(team)}</span><span class="h2h-rating">${num(p.rating)}</span></div>
+            </div>`;
+        };
+
         if (!pa || !pb) {
-            root.innerHTML = '<div class="h2h-card"><p class="h2h-note">Nie sú dostupné dáta hráčov.</p></div>';
+            destroyChart();
+            root.innerHTML = `${duelHtml({
+                sideA: side('a', pa), sideB: side('b', pb),
+                midLabel: 'Výhry', score: ['–', '–'], sub: 'Vyber oboch hráčov', shareA: 50
+            })}
+            <div class="h2h-card h2h-empty"><p class="h2h-note">Vyber dvoch hráčov a porovnaj ich vzájomnú bilanciu, formu a šancu v ďalšom zápase.</p></div>`;
             return;
         }
         const seasonOrder = seasonOrderFilter();
@@ -10562,17 +10546,6 @@ function renderH2HPage() {
             setsA += m.score_own;
             setsB += m.score_opp;
         });
-
-        const side = (cls, p) => {
-            const {first, last} = splitPlayerName(p.name);
-            const team = getCurrentTeamOfPlayer(p) || p.team || '';
-            return `<div class="h2h-side h2h-side--${cls}">
-                <input class="h2h-pick" data-side="${cls}" list="h2hPlayersList" placeholder="Zmeniť hráča ▾" aria-label="Zmeniť hráča ${cls === 'a' ? 'vľavo' : 'vpravo'}" autocomplete="off">
-                <div class="h2h-first">${escapeHtml(first) || '&nbsp;'}</div>
-                <div class="h2h-last">${escapeHtml(last)}</div>
-                <div class="h2h-meta">${team ? teamLogoHtml(team) : ''}<span class="h2h-meta__team">${escapeHtml(team)}</span><span class="h2h-rating">${num(p.rating)}</span></div>
-            </div>`;
-        };
 
         // Comparison (singles, scoped to the chosen season)
         const sumOf = (p) => {
@@ -10667,8 +10640,31 @@ function renderH2HPage() {
     };
 
     const renderTeamsView = () => {
+        const side = (cls, team, rating) => {
+            const label = cls === 'a' ? 'vľavo' : 'vpravo';
+            const select = `<select class="h2h-pick" data-side="${cls}" aria-label="${team ? 'Zmeniť' : 'Vybrať'} tím ${label}">
+                <option value="">${team ? 'Zmeniť tím ▾' : 'Vybrať tím ▾'}</option>
+                ${teamNames.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('')}
+            </select>`;
+            if (!team) {
+                return `<div class="h2h-side h2h-side--${cls} h2h-side--team h2h-side--empty">${select}<div class="h2h-last">Vyber tím</div></div>`;
+            }
+            return `<div class="h2h-side h2h-side--${cls} h2h-side--team">
+                ${select}
+                <div class="h2h-logo h2h-logo--big">${getTeamLogoSrc(team) ? `<img src="${escapeAttr(getTeamLogoSrc(team))}" alt="${escapeAttr(team)}">` : escapeHtml(team.slice(0, 3).toUpperCase())}</div>
+                <div class="h2h-last">${escapeHtml(team)}</div>
+                <div class="h2h-meta"><span class="h2h-meta__team">Ø rating</span><span class="h2h-rating">${num(rating)}</span></div>
+            </div>`;
+        };
         if (!state.ta || !state.tb) {
-            root.innerHTML = '<div class="h2h-card"><p class="h2h-note">Nie sú dostupné dáta tímov.</p></div>';
+            destroyChart();
+            root.innerHTML = `${duelHtml({
+                sideA: side('a', state.ta, state.ta ? teamActiveRating(state.ta) : NaN),
+                sideB: side('b', state.tb, state.tb ? teamActiveRating(state.tb) : NaN),
+                midLabel: 'Stretnutia', score: ['–', '–'], sub: 'Vyber oba tímy', shareA: 50
+            })}
+            <div class="h2h-card h2h-empty"><p class="h2h-note">Vyber dva tímy a porovnaj ich vzájomné stretnutia, hráčov a šancu v ďalšom stretnutí.</p></div>`;
+            root.querySelectorAll('select.h2h-pick').forEach(sel => { sel.value = ''; });
             return;
         }
         const ka = normalizeTeamKey(state.ta), kb = normalizeTeamKey(state.tb);
@@ -10696,6 +10692,7 @@ function renderH2HPage() {
         const rowTot = new Map(), colTot = new Map();
         pair.forEach(g => g.matches.forEach(m => {
             if (m.doubles) return;
+            if (isWalkoverName(m.player_a) || isWalkoverName(m.player_b)) return;
             const aIsHome = normalizeTeamKey(m.player_a_team) === ka;
             const pA = aIsHome ? m.player_a : m.player_b;
             const pB = aIsHome ? m.player_b : m.player_a;
@@ -10734,7 +10731,7 @@ function renderH2HPage() {
 
         // Best player of each side in this rivalry
         const bestOf = (tot, names) => {
-            const sorted = [...names].sort((x, y) => (tot.get(y).w - tot.get(x).w) || (tot.get(x).l - tot.get(y).l));
+            const sorted = [...names].sort((x, y) => ((tot.get(y).w - tot.get(y).l) - (tot.get(x).w - tot.get(x).l)) || (tot.get(y).w - tot.get(x).w));
             if (!sorted.length) return '–';
             const n = sorted[0], t = tot.get(n);
             return `${escapeHtml(titleCaseName(splitPlayerName(n).last))} ${t.w}:${t.l}`;
@@ -10762,16 +10759,6 @@ function renderH2HPage() {
 
         const chanceA = Number.isFinite(ratingA) && Number.isFinite(ratingB) ? getMatchWinChance(ratingA, ratingB) : 50;
         const fixture = findNextFixture(state.ta, state.tb);
-
-        const side = (cls, team, rating) => `<div class="h2h-side h2h-side--${cls} h2h-side--team">
-            <select class="h2h-pick" data-side="${cls}" aria-label="Zmeniť tím ${cls === 'a' ? 'vľavo' : 'vpravo'}">
-                <option value="">Zmeniť tím ▾</option>
-                ${teamNames.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('')}
-            </select>
-            <div class="h2h-logo h2h-logo--big">${getTeamLogoSrc(team) ? `<img src="${escapeAttr(getTeamLogoSrc(team))}" alt="${escapeAttr(team)}">` : escapeHtml(team.slice(0, 3).toUpperCase())}</div>
-            <div class="h2h-last">${escapeHtml(team)}</div>
-            <div class="h2h-meta"><span class="h2h-meta__team">Ø rating</span><span class="h2h-rating">${num(rating)}</span></div>
-        </div>`;
 
         const list = [...meetings].reverse().map(r => {
             const win = r.a > r.b;
@@ -10898,13 +10885,13 @@ function renderH2HPage() {
             const team = resolveTeam(pick.value);
             if (!team) return;
             const other = sideA ? state.tb : state.ta;
-            if (normalizeTeamKey(team) === normalizeTeamKey(other)) [state.ta, state.tb] = [state.tb, state.ta];
+            if (other && normalizeTeamKey(team) === normalizeTeamKey(other)) [state.ta, state.tb] = [state.tb, state.ta];
             else if (sideA) state.ta = team; else state.tb = team;
         } else {
             const name = resolvePlayer(pick.value.trim());
             if (!name) { pick.value = ''; return; }
             const other = sideA ? state.pb : state.pa;
-            if (normalizePlayerKey(name) === normalizePlayerKey(other)) [state.pa, state.pb] = [state.pb, state.pa];
+            if (other && normalizePlayerKey(name) === normalizePlayerKey(other)) [state.pa, state.pb] = [state.pb, state.pa];
             else if (sideA) state.pa = name; else state.pb = name;
         }
         render();

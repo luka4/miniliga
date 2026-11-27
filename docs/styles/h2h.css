@@ -57,26 +57,34 @@ body[data-h2h-mode="teams"] #h2hTypeSeg { display: none; }
   appearance: none;
   display: block;
   width: 100%;
-  max-width: 220px;
-  margin: 0 0 14px;
-  padding: 5px 10px !important;
-  border: 0 !important;
-  background: rgba(255, 255, 255, 0.18) !important;
-  color: #fff !important;
-  font: 600 13px var(--font-sans) !important;
+  max-width: 240px;
+  margin: 0 0 16px;
+  padding: 9px 12px !important;
+  border: 2px solid #fff !important;
+  background: #fff !important;
+  color: var(--ink) !important;
+  font: 700 14px var(--font-sans) !important;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
 }
 #page-h2h .h2h-side--b .h2h-pick { margin-left: auto; text-align: right; }
-#page-h2h .h2h-side .h2h-pick::placeholder { color: #fff; opacity: 1; }
+#page-h2h .h2h-side .h2h-pick::placeholder { color: var(--ink); opacity: 1; font-weight: 700; }
+#page-h2h .h2h-side .h2h-pick:hover { background: var(--sky) !important; }
 #page-h2h .h2h-side .h2h-pick:focus,
-#page-h2h .h2h-side .h2h-pick:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: rgba(255, 255, 255, 0.3) !important; }
+#page-h2h .h2h-side .h2h-pick:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; background: #fff !important; }
 #page-h2h .h2h-side .h2h-pick option { color: var(--color-text); }
+.h2h-side--empty .h2h-last { opacity: 0.55; }
+.h2h-empty { margin-top: 16px; }
 
-.h2h-first { font-size: 20px; font-weight: 600; line-height: 1.2; opacity: 0.92; }
+.h2h-first { font-size: 20px; font-weight: 600; line-height: 1.2; opacity: 0.92; margin-bottom: 8px; }
+/* Anton capitals with accents (Á, Č, Ľ...) rise above the line box: give them room
+   so the accent never touches the first name above. */
 .h2h-last {
   font-family: var(--font-display);
   font-size: clamp(34px, 5vw, 64px);
-  line-height: 0.98;
+  line-height: 1.15;
+  padding-top: 0.12em;
   text-transform: uppercase;
   overflow-wrap: anywhere;
 }
@@ -224,7 +232,7 @@ body[data-h2h-mode="teams"] #h2hTypeSeg { display: none; }
   .h2h-side { padding: 14px; }
   .h2h-last { font-size: clamp(26px, 8vw, 36px); }
   .h2h-first { font-size: 15px; }
-  #page-h2h .h2h-side .h2h-pick { font-size: 12px !important; margin-bottom: 8px; }
+  #page-h2h .h2h-side .h2h-pick { font-size: 13px !important; margin-bottom: 10px; padding: 8px 10px !important; }
   .h2h-meta { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 13px; }
   .h2h-side--b .h2h-meta { flex-direction: column; align-items: flex-end; }
   .h2h-meta .h2h-logo { display: none; }
