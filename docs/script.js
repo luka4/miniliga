@@ -10646,16 +10646,7 @@ function renderH2HPage() {
                 shareA: meetings.length ? (winsA / meetings.length * 100) : 50
             })}
             <div class="h2h-grid">
-                <section class="h2h-card">
-                    <h2>Šanca v ďalšom zápase</h2>
-                    ${probHtml(chanceA)}
-                    <p class="h2h-note">Dvojhra podľa aktuálneho ratingu (rozdiel ${Math.abs(Math.round(pa.rating - pb.rating))} bodov).</p>
-                    ${teamA && teamB && normalizeTeamKey(teamA) !== normalizeTeamKey(teamB) ? fixtureHtml(fixture) : ''}
-                    <h2 class="h2h-card__sub">Porovnanie</h2>
-                    <table class="h2h-compare">${rows.join('')}</table>
-                    <p class="h2h-note">Dvojhra${seasonOrder !== null ? `, ${escapeHtml(currentSeasonName)}` : ', všetky sezóny'}.</p>
-                </section>
-                <section class="h2h-card">
+                <section class="h2h-card h2h-card--full h2h-card--chart">
                     <h2>Vývoj ratingu</h2>
                     <div class="h2h-legend">
                         <span style="color:${COLOR_A}">${escapeHtml(titleCaseName(splitPlayerName(pa.name).last))}</span>
@@ -10668,7 +10659,16 @@ function renderH2HPage() {
                     </div>
                     <div class="h2h-chart"><canvas id="h2hChart"></canvas></div>
                 </section>
-                <section class="h2h-card h2h-card--full">
+                <section class="h2h-card">
+                    <h2>Šanca v ďalšom zápase</h2>
+                    ${probHtml(chanceA)}
+                    <p class="h2h-note">Dvojhra podľa aktuálneho ratingu (rozdiel ${Math.abs(Math.round(pa.rating - pb.rating))} bodov).</p>
+                    ${teamA && teamB && normalizeTeamKey(teamA) !== normalizeTeamKey(teamB) ? fixtureHtml(fixture) : ''}
+                    <h2 class="h2h-card__sub">Porovnanie</h2>
+                    <table class="h2h-compare">${rows.join('')}</table>
+                    <p class="h2h-note">Dvojhra${seasonOrder !== null ? `, ${escapeHtml(currentSeasonName)}` : ', všetky sezóny'}.</p>
+                </section>
+                <section class="h2h-card h2h-card--meetings">
                     <h2>Vzájomné zápasy</h2>
                     ${list || `<p class="h2h-note">${doubles ? 'Títo hráči sa zatiaľ nestretli v štvorhre.' : 'Títo hráči sa zatiaľ nestretli v dvojhre.'}</p>`}
                 </section>
