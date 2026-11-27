@@ -10472,6 +10472,7 @@ function renderH2HPage() {
     // ---- Players view --------------------------------------------------------
     let chart = null;
     let chartToken = 0;
+    const chartShow = {rating: true, avg: true};
     const destroyChart = () => { chartToken++; if (chart) { chart.destroy(); chart = null; } };
 
     const drawRatingChart = (pa, pb, meetings, seasonOrder) => {
@@ -10504,7 +10505,7 @@ function renderH2HPage() {
         const radii = keys.map(k => (meetingKeys.has(k) ? 6 : 0));
         const dataset = (p, color) => ({
             label: splitPlayerName(p.name).last ? titleCaseName(splitPlayerName(p.name).last) : p.name,
-            data: series(p), borderColor: color, backgroundColor: color, borderWidth: 3, tension: 0.15,
+            data: series(p), hidden: !chartShow.rating, borderColor: color, backgroundColor: color, borderWidth: 3, tension: 0.15,
             pointRadius: radii, pointHoverRadius: 6, pointBackgroundColor: '#2c3e63', pointBorderColor: '#fff', pointBorderWidth: 2
         });
         // Dashed horizontal line: player's average rating over the displayed rounds
@@ -10514,6 +10515,7 @@ function renderH2HPage() {
             const nm = splitPlayerName(p.name).last ? titleCaseName(splitPlayerName(p.name).last) : p.name;
             return {
                 label: `Priemer – ${nm}`,
+                hidden: !chartShow.avg,
                 data: keys.map(() => avg),
                 borderColor: color, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [6, 4],
                 pointRadius: 0, pointHoverRadius: 0, tension: 0, fill: false
@@ -10651,6 +10653,10 @@ function renderH2HPage() {
                         <span style="color:${COLOR_B}">${escapeHtml(titleCaseName(splitPlayerName(pb.name).last))}</span>
                         <span class="h2h-legend__dot">● vzájomný zápas</span>
                     </div>
+                    <div class="h2h-toggles">
+                        <button type="button" class="h2h-toggle${chartShow.rating ? ' is-on' : ''}" data-series="rating" aria-pressed="${chartShow.rating}">Rating</button>
+                        <button type="button" class="h2h-toggle${chartShow.avg ? ' is-on' : ''}" data-series="avg" aria-pressed="${chartShow.avg}">Priemerný rating</button>
+                    </div>
                     <div class="h2h-chart"><canvas id="h2hChart"></canvas></div>
                 </section>
                 <section class="h2h-card h2h-card--full">
@@ -10660,6 +10666,19 @@ function renderH2HPage() {
             </div>`;
         // The first render runs while the page loader still hides the content (0x0 canvas),
         // so let the browser lay the page out before Chart.js measures it.
+        root.querySelectorAll('.h2h-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.series;
+                chartShow[key] = !chartShow[key];
+                btn.classList.toggle('is-on', chartShow[key]);
+                btn.setAttribute('aria-pressed', String(chartShow[key]));
+                if (chart) {
+                    const idx = key === 'rating' ? [0, 1] : [2, 3];
+                    idx.forEach(i => { chart.data.datasets[i].hidden = !chartShow[key]; });
+                    chart.update();
+                }
+            });
+        });
         const token = chartToken;
         setTimeout(() => { if (token === chartToken) drawRatingChart(pa, pb, meetings, seasonOrder); }, 0);
     };

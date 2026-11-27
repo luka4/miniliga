@@ -186,6 +186,9 @@ body[data-h2h-mode="teams"] #h2hTypeSeg { display: none; }
 .h2h-legend span::before { content: ""; display: inline-block; width: 14px; height: 4px; margin-right: 6px; vertical-align: middle; background: currentColor; }
 .h2h-legend .h2h-legend__dot { color: var(--ink); }
 .h2h-legend .h2h-legend__dot::before { display: none; }
+.h2h-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.h2h-toggle { font: inherit; font-size: 12px; font-weight: 600; padding: 4px 10px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid currentColor; opacity: 0.5; }
+.h2h-toggle.is-on { opacity: 1; background: var(--ink); color: #fff; }
 .h2h-chart { position: relative; height: 300px; }
 
 /* Meetings list */
