@@ -4833,6 +4833,28 @@ function renderRatingLineChart(p, compareP, canvasId, chartRefSetter, attempt = 
         });
     }
 
+    // Dashed horizontal line: average rating over all displayed rounds
+    const addAverageLine = (series, color, name, multi) => {
+        const vals = series.filter(v => Number.isFinite(v));
+        if (!vals.length) return;
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        datasets.push({
+            label: multi ? `Priemer – ${name}` : 'Priemerný rating',
+            data: series.map(v => (Number.isFinite(v) ? avg : null)),
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            tension: 0,
+            fill: false,
+            spanGaps: true
+        });
+    };
+    addAverageLine(dataPoints, themePrimary, p.name, !!compareP);
+    if (compareP) addAverageLine(buildFilledSeries(compareP.history, allKeys), themeDanger, compareP.name, true);
+
     const extraDatasets = typeof options.getExtraDatasets === 'function'
         ? options.getExtraDatasets({allKeys, labels, buildFilledSeries})
         : (Array.isArray(options.extraDatasets) ? options.extraDatasets : []);
@@ -10485,10 +10507,22 @@ function renderH2HPage() {
             data: series(p), borderColor: color, backgroundColor: color, borderWidth: 3, tension: 0.15,
             pointRadius: radii, pointHoverRadius: 6, pointBackgroundColor: '#2c3e63', pointBorderColor: '#fff', pointBorderWidth: 2
         });
+        // Dashed horizontal line: player's average rating over the displayed rounds
+        const avgDataset = (p, color) => {
+            const vals = series(p).filter(v => Number.isFinite(v));
+            const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+            const nm = splitPlayerName(p.name).last ? titleCaseName(splitPlayerName(p.name).last) : p.name;
+            return {
+                label: `Priemer – ${nm}`,
+                data: keys.map(() => avg),
+                borderColor: color, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [6, 4],
+                pointRadius: 0, pointHoverRadius: 0, tension: 0, fill: false
+            };
+        };
         Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
         chart = new Chart(canvas, {
             type: 'line',
-            data: {labels, datasets: [dataset(pa, COLOR_A), dataset(pb, COLOR_B)]},
+            data: {labels, datasets: [dataset(pa, COLOR_A), dataset(pb, COLOR_B), avgDataset(pa, COLOR_A), avgDataset(pb, COLOR_B)]},
             options: {
                 responsive: true, maintainAspectRatio: false,
                 interaction: {mode: 'index', intersect: false},
