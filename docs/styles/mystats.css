@@ -451,7 +451,7 @@
 
 .derived-stats-container {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   align-items: stretch;
 }
@@ -522,7 +522,7 @@
 
 .derived-stats-chart {
   position: relative;
-  height: 280px;
+  height: 420px;
 }
 
 /* ============================================================
@@ -1106,7 +1106,7 @@
   }
 
   .derived-stats-chart {
-    height: 240px;
+    height: 340px;
   }
 
   .derived-stat-label {

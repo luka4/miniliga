@@ -1036,7 +1036,7 @@ tbody td:nth-child(2) {
 
 .derived-stats-grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: stretch;
 }
@@ -1111,13 +1111,13 @@ tbody td:nth-child(2) {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 260px;
+  min-height: 400px;
 }
 
 #statsRadarChart {
   width: 100%;
-  max-width: 360px;
-  height: 260px;
+  max-width: 560px;
+  height: 400px;
 }
 
 .stats-description {
@@ -1202,7 +1202,7 @@ tbody td:nth-child(2) {
   }
   #statsRadarChart {
     max-width: 100%;
-    height: 240px;
+    height: 340px;
   }
   .stat-label-der {
     align-items: flex-start;
