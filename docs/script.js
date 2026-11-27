@@ -4833,14 +4833,19 @@ function renderRatingLineChart(p, compareP, canvasId, chartRefSetter, attempt = 
         });
     }
 
-    // Dashed horizontal line: average rating over all displayed rounds
+    // Dashed line: running average rating (updates every round)
     const addAverageLine = (series, color, name, multi) => {
-        const vals = series.filter(v => Number.isFinite(v));
-        if (!vals.length) return;
-        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        if (!series.some(v => Number.isFinite(v))) return;
+        // Running average: mean of all rounds up to and including each round
+        let sum = 0, n = 0;
+        const running = series.map(v => {
+            if (!Number.isFinite(v)) return null;
+            sum += v; n++;
+            return sum / n;
+        });
         datasets.push({
             label: multi ? `Priemer – ${name}` : 'Priemerný rating',
-            data: series.map(v => (Number.isFinite(v) ? avg : null)),
+            data: running,
             borderColor: color,
             backgroundColor: 'transparent',
             borderWidth: 1.5,
@@ -10508,15 +10513,19 @@ function renderH2HPage() {
             data: series(p), hidden: !chartShow.rating, borderColor: color, backgroundColor: color, borderWidth: 3, tension: 0.15,
             pointRadius: radii, pointHoverRadius: 6, pointBackgroundColor: '#2c3e63', pointBorderColor: '#fff', pointBorderWidth: 2
         });
-        // Dashed horizontal line: player's average rating over the displayed rounds
+        // Dashed line: player's running average rating (updates every round)
         const avgDataset = (p, color) => {
-            const vals = series(p).filter(v => Number.isFinite(v));
-            const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+            let sum = 0, n = 0;
+            const running = series(p).map(v => {
+                if (!Number.isFinite(v)) return null;
+                sum += v; n++;
+                return sum / n;
+            });
             const nm = splitPlayerName(p.name).last ? titleCaseName(splitPlayerName(p.name).last) : p.name;
             return {
                 label: `Priemer – ${nm}`,
                 hidden: !chartShow.avg,
-                data: keys.map(() => avg),
+                data: running,
                 borderColor: color, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [6, 4],
                 pointRadius: 0, pointHoverRadius: 0, tension: 0, fill: false
             };
